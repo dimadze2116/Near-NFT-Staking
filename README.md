@@ -1,6 +1,6 @@
 # Near NFT Staking
 
-A Telegram Mini App for staking NFTs and earning **$NEAR** rewards — fully
+A Telegram Mini App (@NearNFTStaking_bot) for staking NFTs and earning **$NEAR** rewards — fully
 on-chain, live on NEAR mainnet.
 
 Connect your wallet, lock your NFTs for a chosen period, and earn tiered
