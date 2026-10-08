@@ -1,6 +1,6 @@
 # NEAR NFT Staking Bot
 
-@NearNFTStaking_bot
+**Bot:** [@NearNFTStaking_bot](https://t.me/NearNFTStaking_bot)
 
 Telegram bot and Mini App for the **NEAR Legion** NFT collection (`nearlegion.nfts.tg`): NFT-gated access to a private channel, on-chain staking, and a peer-to-peer marketplace.
 
