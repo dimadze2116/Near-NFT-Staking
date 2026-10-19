@@ -1,0 +1,115 @@
+.nft-card {
+  position: relative;
+  width: 100%;
+}
+
+.nft-card__glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 15px;
+  border: 1px solid rgb(var(--accent-light-rgb));
+  box-shadow: 0 0 3px 3px rgb(var(--accent-light-rgb));
+  pointer-events: none;
+}
+
+.nft-card__inner {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1px;
+  border: none;
+  border-radius: 15px;
+  overflow: hidden;
+  cursor: pointer;
+  background: transparent;
+  font-family: -apple-system, "SF Pro Display", "Segoe UI", sans-serif;
+  text-align: center;
+}
+
+.nft-card__glass {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: linear-gradient(-78.7956deg, rgb(var(--glass-a-rgb) / 0.4) 6.0485%, rgb(var(--ambient-rgb) / 0.4) 109.49%);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  pointer-events: none;
+}
+
+.nft-card__image-wrap {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.nft-card__image {
+  position: absolute;
+  top: -1.16%;
+  left: -0.58%;
+  width: 101.16%;
+  height: 101.16%;
+  object-fit: cover;
+}
+
+.nft-card__info {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  width: 100%;
+  padding: 10px;
+  color: var(--text-strong);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.nft-card__name {
+  font-weight: 800;
+}
+
+.nft-card__id {
+  font-weight: 400;
+}
+
+.nft-card__highlight {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset -1px -1px 1px -1px rgba(255, 255, 255, 0.45),
+    inset 1px 1px 1px -1px rgba(255, 255, 255, 0.45);
+}
+
+.nft-card__sell-btn {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgb(var(--surface-sunken-rgb) / 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgb(var(--accent-light-rgb));
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.nft-card__sell-btn:active {
+  transform: scale(0.92);
+}

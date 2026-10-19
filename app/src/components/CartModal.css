@@ -1,0 +1,288 @@
+/* Плашка корзины. Стекло/окантовка/перелив и анимации — общий приём проекта
+   (см. MyRankBar.css, ButtonNftStake.css). */
+.cart-modal {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  padding: 15px;
+  border-radius: 15px;
+  box-sizing: border-box;
+  font-family: -apple-system, "SF Pro Display", "Segoe UI", sans-serif;
+  font-weight: 800;
+}
+
+/* Анимация — на каждом ребёнке напрямую, а не на .cart-modal: иначе в Chromium
+   блюр .cart-modal__glass ломается, пока transform-анимация идёт на предке
+   (тот же приём, что в MyRankBar.css и ButtonNftStake.css) */
+.cart-modal__glass,
+.cart-modal__content,
+.cart-modal__highlight {
+  animation: stake-flow-appear 0.34s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
+}
+
+.cart-modal--exiting .cart-modal__glass,
+.cart-modal--exiting .cart-modal__content,
+.cart-modal--exiting .cart-modal__highlight {
+  animation: stake-flow-disappear 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* Заливка+блюр как у .header__glass, но с тенью — плашка висит над скроллом */
+.cart-modal__glass {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: linear-gradient(116.5deg, rgb(var(--glass-a-rgb) / 0.4) 9.4878%, rgb(var(--glass-b-rgb) / 0.4) 106.05%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow:
+    0 0 10px 1px rgba(0, 0, 0, 0.45),
+    0 3px 8px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+/* Тот же плавающий перелив, что и на стекле хедера */
+.cart-modal__glass::before {
+  content: "";
+  position: absolute;
+  width: 214.5%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(30px);
+  will-change: transform;
+  left: -64.75%;
+  top: -104.75%;
+  background: radial-gradient(circle, rgb(var(--ambient-rgb) / 0.42), rgb(var(--ambient-rgb) / 0) 65%);
+  animation: header-blob-violet 26s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cart-modal__glass,
+  .cart-modal__content,
+  .cart-modal__highlight,
+  .cart-modal--exiting .cart-modal__glass,
+  .cart-modal--exiting .cart-modal__content,
+  .cart-modal--exiting .cart-modal__highlight,
+  .cart-modal__glass::before {
+    animation: none;
+  }
+}
+
+.cart-modal__highlight {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset -1px -1px 1px -1px rgba(255, 255, 255, 0.45),
+    inset 1px 1px 1px -1px rgba(255, 255, 255, 0.45);
+}
+
+.cart-modal__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  /* тот же ритм, что между блоками хедера */
+  gap: 12px;
+}
+
+.cart-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cart-modal__title {
+  font-size: 20px;
+  color: var(--text-title);
+  white-space: nowrap;
+}
+
+/* Круглая кнопка-крестик — «утопленная» лунка, как плитки статов в хедере */
+.cart-modal__close {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgb(var(--surface-sunken-rgb) / 0.1);
+  color: var(--text-strong);
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.cart-modal__close:active {
+  background: rgb(var(--surface-sunken-rgb) / 0.24);
+}
+
+.cart-modal__close svg {
+  width: 15px;
+  height: 15px;
+}
+
+.cart-modal__items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* длинная корзина не выдавливает навбар — прокручиваем список внутри */
+  max-height: 168px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.cart-modal__items::-webkit-scrollbar {
+  display: none;
+  width: 0;
+}
+
+.cart-modal__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 13px;
+  background: rgb(var(--surface-sunken-rgb) / 0.1);
+}
+
+.cart-modal__thumb {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.cart-modal__item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.cart-modal__item-name {
+  font-size: 14px;
+  color: var(--text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cart-modal__item-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: rgb(var(--accent-light-rgb));
+  white-space: nowrap;
+}
+
+.cart-modal__near {
+  width: 1em;
+  height: 1em;
+  flex: none;
+  color: inherit;
+}
+
+.cart-modal__remove {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: color 0.1s ease, background-color 0.1s ease;
+}
+
+.cart-modal__remove:active {
+  background: rgb(var(--surface-sunken-rgb) / 0.24);
+  color: var(--text-strong);
+}
+
+.cart-modal__remove svg {
+  width: 14px;
+  height: 14px;
+}
+
+.cart-modal__total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 2px;
+}
+
+.cart-modal__total-label {
+  font-size: 16px;
+  color: var(--text-strong);
+}
+
+.cart-modal__total-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 20px;
+  color: rgb(var(--accent-light-rgb));
+  white-space: nowrap;
+}
+
+/* Заливка/нажатие — как у .nft-stake-button__inner */
+.cart-modal__buy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 20px;
+  border: none;
+  border-radius: 13px;
+  background: rgb(var(--accent-rgb) / 0.74);
+  color: rgb(var(--accent-text-hi-rgb));
+  font: inherit;
+  font-size: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.1s ease, box-shadow 0.1s ease;
+}
+
+.cart-modal__buy:active {
+  background: rgb(var(--accent-rgb) / 0.87);
+  box-shadow: inset 0 0 3px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* --- Наши состояния, которых нет в макете дизайнера --- */
+
+/* Корзину можно опустошить, не закрывая плашку */
+.cart-modal__empty {
+  padding: 14px 2px;
+  font-size: 14px;
+  color: var(--text-soft);
+  text-align: center;
+}
+
+/* Пока идёт покупка — блокируем всё, чтобы не отправить вторую транзакцию */
+.cart-modal__buy:disabled,
+.cart-modal__close:disabled,
+.cart-modal__remove:disabled {
+  cursor: default;
+}
+
+.cart-modal__buy:disabled {
+  background: rgb(var(--accent-rgb) / 0.24);
+  color: var(--text-dim);
+}
+
+.cart-modal__close:disabled,
+.cart-modal__remove:disabled {
+  opacity: 0.5;
+}

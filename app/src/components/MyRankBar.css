@@ -1,0 +1,167 @@
+.my-rank {
+  position: relative;
+  /* та же ширина, что и у строк leaderboard__row (те отступают 20px padding
+     скролл-контейнера + 15px padding .leaderboard от края экрана, тогда как
+     .stake-screen__bottom отступает только 10px — добавляем разницу здесь) */
+  width: calc(100% - 50px);
+  overflow: hidden;
+  /* рамка вокруг фиолетовой заливки — как у кнопки Stake For (padding 3px) */
+  padding: 3px;
+  border-radius: 15px;
+  box-sizing: border-box;
+  font-family: -apple-system, "SF Pro Display", "Segoe UI", sans-serif;
+  font-weight: 800;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .my-rank__glass,
+  .my-rank__row,
+  .my-rank__highlight,
+  .my-rank--exiting .my-rank__glass,
+  .my-rank--exiting .my-rank__row,
+  .my-rank--exiting .my-rank__highlight,
+  .my-rank__glass::before {
+    animation: none;
+  }
+}
+
+/* Анимация появления/ухода — на каждом ребёнке напрямую, а не на .my-rank:
+   иначе в Chromium блюр .my-rank__glass ломается, пока transform-анимация
+   идёт на его предке (см. тот же приём в ButtonNftStake.css) */
+.my-rank__glass,
+.my-rank__row,
+.my-rank__highlight {
+  animation: stake-flow-appear 0.34s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
+}
+
+.my-rank--exiting .my-rank__glass,
+.my-rank--exiting .my-rank__row,
+.my-rank--exiting .my-rank__highlight {
+  animation: stake-flow-disappear 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* Заливка+блюр — те же, что и у кнопки Stake For */
+.my-rank__glass {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background-image: linear-gradient(230.969deg, rgb(var(--glass-a-rgb) / 80%) 7.1092%, rgb(var(--glass-b-rgb) / 70%) 96.907%);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  box-shadow:
+    0 0 10px 1px rgba(0, 0, 0, 0.45),
+    0 3px 8px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+/* Тот же плавающий зелёный перелив, что и у кнопки Stake For */
+.my-rank__glass::before {
+  content: "";
+  position: absolute;
+  width: 214.5%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(30px);
+  will-change: transform;
+  left: -64.75%;
+  top: 50%;
+  margin-top: -107.25%;
+  background: radial-gradient(circle, rgb(var(--ambient-rgb) / 0.42), rgb(var(--ambient-rgb) / 0) 65%);
+  animation: sidebar-blob-green 26s ease-in-out infinite alternate;
+}
+
+.my-rank__highlight {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset -1px -1px 1px -1px rgba(255, 255, 255, 0.45),
+    inset 1px 1px 1px -1px rgba(255, 255, 255, 0.45);
+}
+
+.my-rank__row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 15px;
+  border: none;
+  border-radius: 13px;
+  /* та же фиолетовая заливка, что и у .nft-stake-button__inner */
+  background: rgb(var(--accent-rgb) / 0.74);
+  box-sizing: border-box;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  transition: background-color 0.1s ease, box-shadow 0.1s ease;
+  /* держим текст на своём GPU-слое постоянно — иначе в конце transform-
+     анимации слой снимается и текст на кадр "прыгает" (снап рендеринга шрифта) */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Нажатие — как у .nft-stake-button__inner:active */
+.my-rank__row:active {
+  background: rgb(var(--accent-rgb) / 0.87);
+  box-shadow: inset 0 0 3px 2px rgba(0, 0, 0, 0.4);
+}
+
+.my-rank__left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 0;
+}
+
+.my-rank__position {
+  font-size: 20px;
+  color: var(--text-strong);
+  white-space: nowrap;
+}
+
+.my-rank__name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  color: var(--text-strong);
+}
+
+.my-rank__username {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-rank__you {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgb(var(--chip-rgb) / 0.2);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-strong);
+}
+
+.my-rank__nft-count {
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.my-rank__reward {
+  font-size: 16px;
+  color: rgb(var(--accent-text-hi-rgb));
+  white-space: nowrap;
+  flex-shrink: 0;
+}

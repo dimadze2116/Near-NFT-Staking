@@ -1,0 +1,85 @@
+.drop-indicator {
+  position: absolute;
+  overflow: hidden;
+  /* поверх контента кнопок (у них z-index: 1), чтобы капля преломляла то, что под ней */
+  z-index: 2;
+  pointer-events: none;
+}
+
+.drop-indicator__pill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  transition:
+    transform 0.5s cubic-bezier(0.33, 1.2, 0.6, 1),
+    width 0.5s cubic-bezier(0.33, 1.2, 0.6, 1);
+  will-change: transform, width;
+}
+
+/* Капля тянется к цели: разгон без отскока */
+.drop-indicator__pill--stretch {
+  transition:
+    transform 0.18s cubic-bezier(0.4, 0, 0.3, 1),
+    width 0.18s cubic-bezier(0.4, 0, 0.3, 1);
+}
+
+/* Капля схлопывается к новой кнопке: демпфированный довод, едва заметный перелёт */
+.drop-indicator__pill--settle {
+  transition:
+    transform 0.4s cubic-bezier(0.25, 1.12, 0.35, 1),
+    width 0.4s cubic-bezier(0.25, 1.12, 0.35, 1);
+}
+
+/* Оболочка капли: форма пилюли, обрезает линзу */
+.drop-indicator__shell {
+  position: absolute;
+  inset: 0;
+  border-radius: 13px;
+  overflow: hidden;
+}
+
+/* Стекло капли */
+.drop-indicator__drop {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  backdrop-filter: blur(14.5px);
+  -webkit-backdrop-filter: blur(14.5px);
+}
+
+.drop-indicator__drop--nav {
+  background: rgb(var(--surface-sunken-rgb) / 0.16);
+  box-shadow:
+    inset -1px -1px 1px -1px rgba(255, 255, 255, 0.2),
+    inset 1px 1px 1px -1px rgba(255, 255, 255, 0.2);
+}
+
+.drop-indicator__drop--panel {
+  background: rgb(var(--accent-rgb) / 0.74);
+  box-shadow:
+    inset -1px -1px 1px -1px rgba(255, 255, 255, 0.55),
+    inset 1px 1px 1px -1px rgba(255, 255, 255, 0.55);
+}
+
+/* Увеличенная копия ряда кнопок — "преломлённое" изображение внутри капли.
+   Движется противоходом с той же кривой, чтобы контент оставался на месте экрана */
+.drop-indicator__lens {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  transition: transform 0.5s cubic-bezier(0.33, 1.2, 0.6, 1);
+  will-change: transform;
+}
+
+.drop-indicator__pill--stretch .drop-indicator__lens {
+  transition: transform 0.18s cubic-bezier(0.4, 0, 0.3, 1);
+}
+
+.drop-indicator__pill--settle .drop-indicator__lens {
+  transition: transform 0.4s cubic-bezier(0.25, 1.12, 0.35, 1);
+}

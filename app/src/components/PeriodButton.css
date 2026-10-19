@@ -1,0 +1,46 @@
+.period-button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: none;
+  border-radius: 13px;
+  padding: 10px 14px;
+  overflow: hidden;
+  cursor: pointer;
+  background: rgb(var(--surface-sunken-rgb) / 0.1);
+  font-family: -apple-system, "SF Pro Display", "Segoe UI", sans-serif;
+  font-weight: 800;
+}
+
+/* Текст выше капли-индикатора (у неё z-index: 2) — стекло скользит под текстом */
+.period-button__days,
+.period-button__apr {
+  position: relative;
+  z-index: 3;
+  white-space: nowrap;
+  /* без перелёта в кривой и с закреплением на слое — иначе текст
+     дёргается в конце масштабирования */
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.35, 1);
+  will-change: transform;
+}
+
+/* Под каплей надписи увеличиваются, как иконки в линзе навбара */
+.period-button--selected .period-button__days,
+.period-button--selected .period-button__apr {
+  transform: scale(1.1);
+  color: rgb(var(--accent-text-hi-rgb));
+}
+
+.period-button__days {
+  font-size: 20px;
+  color: rgb(var(--accent-light-rgb));
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.25);
+}
+
+.period-button__apr {
+  font-size: 11px;
+  color: var(--text-strong);
+}

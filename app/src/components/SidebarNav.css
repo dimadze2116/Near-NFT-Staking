@@ -1,0 +1,157 @@
+.sidebar-nav {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  overflow: hidden;
+  padding: 3px;
+  border-radius: 15px;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: -apple-system, "SF Pro Display", "Segoe UI", sans-serif;
+  font-weight: 800;
+}
+
+.sidebar-nav__glass {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: linear-gradient(230.969deg, rgb(var(--glass-a-rgb) / 0.4) 7.1092%, rgb(var(--glass-b-rgb) / 0.4) 96.907%);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  pointer-events: none;
+}
+
+/* Ненавязчивый перелив: большое размытое зелёное пятно
+   медленно плавает по стеклу — как в хедере */
+.sidebar-nav__glass::before {
+  content: "";
+  position: absolute;
+  width: 214.5%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(30px);
+  will-change: transform;
+  left: -64.75%;
+  /* центр пятна — на середине навбара: margin в % считается от ширины,
+     поэтому не зависит от малой высоты панели */
+  top: 50%;
+  margin-top: -107.25%;
+  background: radial-gradient(circle, rgb(var(--ambient-rgb) / 0.42), rgb(var(--ambient-rgb) / 0) 65%);
+  animation: sidebar-blob-green 26s ease-in-out infinite alternate;
+}
+
+@keyframes sidebar-blob-green {
+  0% {
+    transform: translate(-23%, 0%) scale(1);
+  }
+  33% {
+    transform: translate(32%, 12%) scale(1.15);
+  }
+  66% {
+    transform: translate(-10%, -3%) scale(0.9);
+  }
+  100% {
+    transform: translate(15%, 15%) scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-nav__glass::before {
+    animation: none;
+  }
+}
+
+.sidebar-nav__highlight {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset -1px -1px 1px -1px rgba(255, 255, 255, 0.45),
+    inset 1px 1px 1px -1px rgba(255, 255, 255, 0.45);
+}
+
+.sidebar-nav__button {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  overflow: hidden;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 13px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-strong);
+  font-family: inherit;
+  font-weight: 800;
+}
+
+.sidebar-nav__button-icon {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  /* та же кривая зума, что у текста кнопок периодов */
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.35, 1);
+  will-change: transform;
+}
+
+/* +3% к размеру иконок — на самом svg, чтобы не конфликтовать с zoom-transform
+   активного состояния, который висит на родителе */
+.sidebar-nav__button-icon svg {
+  transform: scale(1.03);
+}
+
+.sidebar-nav__button-label {
+  position: relative;
+  z-index: 1;
+  font-size: 8px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sidebar-nav__button,
+.sidebar-nav__button-label {
+  transition: color 0.35s ease;
+}
+
+.sidebar-nav__button--active {
+  color: rgb(var(--accent-soft-rgb));
+}
+
+.sidebar-nav__button:not(.sidebar-nav__button--active) {
+  color: var(--text-strong);
+}
+
+.sidebar-nav__button--active .sidebar-nav__button-icon {
+  transform: scale(1.08);
+}
+
+/* Копия кнопки внутри линзы — та же геометрия, без интерактива */
+.sidebar-nav__lens-item {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 12px;
+  color: var(--text-strong);
+  transition: color 0.35s ease;
+}
+
+.sidebar-nav__lens-item--active {
+  color: rgb(var(--accent-soft-rgb));
+}
+
+.sidebar-nav__lens-item--active .sidebar-nav__button-icon {
+  transform: scale(1.08);
+}
+

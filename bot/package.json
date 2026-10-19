@@ -1,0 +1,30 @@
+{
+  "name": "near-nft-gate-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot: NEAR NFT gating + staking",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "npx ts-node src/server.ts"
+  },
+  "dependencies": {
+    "@scure/base": "^1.1.7",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "near-api-js": "^5.0.1",
+    "near-kit": "^0.14.0",
+    "node-cron": "^3.0.3",
+    "sql.js": "^1.12.0",
+    "telegraf": "^4.16.3",
+    "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/sql.js": "^1.4.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}

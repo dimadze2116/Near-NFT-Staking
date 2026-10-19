@@ -1,0 +1,48 @@
+.scroll-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+}
+
+.scroll-body__nfts {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+
+.scroll-body__heading {
+  margin: 0;
+  padding: 0 15px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-strong);
+  font-family: -apple-system, "SF Pro Display", "Segoe UI", sans-serif;
+}
+
+.scroll-body__heading-arrow {
+  display: inline-block;
+  margin: 0 12px;
+  color: var(--text-strong);
+}
+
+.scroll-body__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+/* От 550px до 700px экран ещё во всю ширину (рамка 402px начинается с 700px) — карточкам просторнее в 3 колонки */
+@media (min-width: 550px) and (max-width: 699.98px) {
+  .scroll-body__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

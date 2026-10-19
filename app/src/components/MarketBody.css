@@ -1,0 +1,122 @@
+.market-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.market-body__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+}
+
+@media (min-width: 550px) and (max-width: 699.98px) {
+  .market-body__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.market-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: 15px;
+  overflow: hidden;
+  background: transparent;
+  font-family: -apple-system, "SF Pro Display", "Segoe UI", sans-serif;
+}
+
+.market-card__glass {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: linear-gradient(-78.7956deg, rgb(var(--glass-a-rgb) / 0.4) 6.0485%, rgb(var(--ambient-rgb) / 0.4) 109.49%);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  pointer-events: none;
+}
+
+.market-card__image-wrap {
+  position: relative;
+  z-index: 1;
+  aspect-ratio: 1;
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.market-card__image {
+  width: 101.16%;
+  height: 101.16%;
+  position: absolute;
+  top: -1.16%;
+  left: -0.58%;
+  object-fit: cover;
+}
+
+.market-card__info {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px 4px;
+  color: var(--text-strong);
+}
+
+.market-card__name {
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.market-card__price {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 14px;
+  font-weight: 800;
+  color: rgb(var(--accent-light-rgb));
+}
+
+.market-card__near-icon {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+}
+
+.market-card__btn {
+  position: relative;
+  z-index: 1;
+  margin: 8px 8px 8px;
+  border: none;
+  border-radius: 10px;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  background: rgb(var(--accent-rgb) / 0.74);
+  color: rgb(var(--accent-text-hi-rgb));
+}
+
+.market-card__btn--in-cart {
+  background: rgb(var(--surface-sunken-rgb) / 0.4);
+  color: var(--text-strong);
+}
+
+.market-card__btn--cancel {
+  background: rgb(var(--surface-sunken-rgb) / 0.4);
+  color: var(--text-strong);
+}
+
+.market-card__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

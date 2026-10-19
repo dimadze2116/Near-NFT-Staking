@@ -1,0 +1,121 @@
+.staking-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  font-family: -apple-system, "SF Pro Display", "Segoe UI", sans-serif;
+  font-weight: 800;
+}
+
+/* Каждый блок хагает свой контент — подложка соразмерна ему.
+   Заливка+блюр — прямо на строке (а не на дочернем слое): opacity/transform
+   анимации появления на САМОМ backdrop-filter-элементе его не гасят,
+   тогда как на предке — гасят. Поэтому блюр живёт и во время анимации. */
+.staking-panel__row {
+  position: relative;
+  overflow: hidden;
+  width: auto;
+  border-radius: 15px;
+  box-sizing: border-box;
+  background-image: linear-gradient(230.969deg, rgb(var(--glass-a-rgb) / 80%) 7.1092%, rgb(var(--glass-b-rgb) / 70%) 96.907%);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  /* Тень по кругу — для читаемости поверх пёстрого фона.
+     Компактная, чтобы не залезать на соседние плашки во флоу (gap 3px) */
+  box-shadow:
+    0 0 10px 1px rgba(0, 0, 0, 0.45),
+    0 3px 8px rgba(0, 0, 0, 0.35);
+  /* Свой слой композитинга — иначе блюр дёргается при скролле грида под ним */
+  transform: translateZ(0);
+  animation: stake-flow-appear 0.34s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
+}
+
+/* Ненавязчивый перелив — как у навбара: медленно плавающее зелёное пятно */
+.staking-panel__row::before {
+  content: "";
+  position: absolute;
+  width: 214.5%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(30px);
+  will-change: transform;
+  left: -64.75%;
+  top: 50%;
+  margin-top: -107.25%;
+  background: radial-gradient(circle, rgb(var(--ambient-rgb) / 0.42), rgb(var(--ambient-rgb) / 0) 65%);
+  animation: sidebar-blob-green 26s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+/* Исчезновение — период уходит первым (кнопка следом, см. ButtonNftStake.css) */
+.staking-panel__row--periods.staking-panel__row--exiting {
+  animation: stake-flow-disappear 0.3s cubic-bezier(0.4, 0, 1, 1) 0.08s forwards;
+}
+
+/* Появление/исчезновение флоу: плавно, с лёгким сдвигом по вертикали.
+   Enter — backwards (держит скрытое состояние до старта, без вспышки);
+   после завершения трансформа не остаётся, blur в покое честный. */
+/* translateZ(0) держит элемент на своём слое композитинга и во время анимации —
+   иначе на телефонах при скролле контента под блюром Chromium на кадр
+   перерастеризует подложку не в такт скроллу, и элемент видимо "дёргается" */
+@keyframes stake-flow-appear {
+  from {
+    opacity: 0;
+    transform: translateY(10px) translateZ(0);
+  }
+  to {
+    transform: translateZ(0);
+  }
+}
+
+@keyframes stake-flow-disappear {
+  to {
+    opacity: 0;
+    transform: translateY(10px) translateZ(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .staking-panel__row,
+  .staking-panel__row--exiting,
+  .staking-panel__row::before {
+    animation: none;
+  }
+}
+
+.staking-panel__row-highlight {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset -1px -1px 1px -1px rgba(255, 255, 255, 0.45),
+    inset 1px 1px 1px -1px rgba(255, 255, 255, 0.45);
+}
+
+/* Период: тонкая рамка 3px, как у Stake NFT — кнопки заполняют внутренность */
+.staking-panel__row--periods {
+  padding: 3px;
+  /* появляется вторым — после кнопки */
+  animation-delay: 0.08s;
+}
+
+.staking-panel__buttons {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  gap: 5px;
+  width: auto;
+}
+
+/* Кнопки периода — фиксированные 106×40 */
+.staking-panel__buttons > .period-button {
+  flex: none;
+  width: 106px;
+  height: 40px;
+  min-width: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+

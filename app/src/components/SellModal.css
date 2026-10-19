@@ -1,0 +1,222 @@
+.sell-modal {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  padding: 15px;
+  border-radius: 15px;
+  box-sizing: border-box;
+  font-family: -apple-system, "SF Pro Display", "Segoe UI", sans-serif;
+  font-weight: 800;
+}
+
+/* Анимация — на каждом ребёнке напрямую, а не на .sell-modal: иначе в Chromium
+   блюр .sell-modal__glass ломается, пока transform-анимация идёт на предке */
+.sell-modal__glass,
+.sell-modal__content,
+.sell-modal__highlight {
+  animation: stake-flow-appear 0.34s cubic-bezier(0.2, 0.8, 0.3, 1) backwards;
+}
+
+.sell-modal--exiting .sell-modal__glass,
+.sell-modal--exiting .sell-modal__content,
+.sell-modal--exiting .sell-modal__highlight {
+  animation: stake-flow-disappear 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.sell-modal__glass {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: linear-gradient(116.5deg, rgb(var(--glass-a-rgb) / 0.4) 9.4878%, rgb(var(--glass-b-rgb) / 0.4) 106.05%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow:
+    0 0 10px 1px rgba(0, 0, 0, 0.45),
+    0 3px 8px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.sell-modal__glass::before {
+  content: "";
+  position: absolute;
+  width: 214.5%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(30px);
+  will-change: transform;
+  left: -64.75%;
+  top: -104.75%;
+  background: radial-gradient(circle, rgb(var(--ambient-rgb) / 0.42), rgb(var(--ambient-rgb) / 0) 65%);
+  animation: header-blob-violet 26s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sell-modal__glass,
+  .sell-modal__content,
+  .sell-modal__highlight,
+  .sell-modal--exiting .sell-modal__glass,
+  .sell-modal--exiting .sell-modal__content,
+  .sell-modal--exiting .sell-modal__highlight,
+  .sell-modal__glass::before {
+    animation: none;
+  }
+}
+
+.sell-modal__highlight {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset -1px -1px 1px -1px rgba(255, 255, 255, 0.45),
+    inset 1px 1px 1px -1px rgba(255, 255, 255, 0.45);
+}
+
+.sell-modal__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sell-modal__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sell-modal__thumb {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.sell-modal__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sell-modal__title {
+  font-size: 20px;
+  color: var(--text-title);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sell-modal__subtitle {
+  font-size: 14px;
+  color: rgb(var(--accent-light-rgb));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sell-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sell-modal__label {
+  font-size: 14px;
+  color: var(--text-strong);
+}
+
+/* Поле ввода — «утопленная» лунка, как плитки статов в хедере */
+.sell-modal__input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 13px;
+  background: rgb(var(--surface-sunken-rgb) / 0.1);
+}
+
+.sell-modal__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  background: none;
+  outline: none;
+  font: inherit;
+  font-size: 20px;
+  color: var(--text-strong);
+}
+
+.sell-modal__input::placeholder {
+  color: var(--text-dim);
+  opacity: 0.7;
+}
+
+.sell-modal__near {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  color: rgb(var(--accent-light-rgb));
+}
+
+.sell-modal__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.sell-modal__cancel,
+.sell-modal__submit {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 8px 20px;
+  border: none;
+  border-radius: 13px;
+  font: inherit;
+  font-size: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.1s ease, box-shadow 0.1s ease;
+}
+
+/* Отмена — нейтральная «лунка», без акцентной заливки */
+.sell-modal__cancel {
+  background: rgb(var(--surface-sunken-rgb) / 0.1);
+  color: var(--text-strong);
+}
+
+.sell-modal__cancel:active {
+  background: rgb(var(--surface-sunken-rgb) / 0.24);
+  box-shadow: inset 0 0 3px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* Заливка/нажатие/неактивность — как у .nft-stake-button__inner */
+.sell-modal__submit {
+  background: rgb(var(--accent-rgb) / 0.74);
+  color: rgb(var(--accent-text-hi-rgb));
+}
+
+.sell-modal__submit:active:not(:disabled) {
+  background: rgb(var(--accent-rgb) / 0.87);
+  box-shadow: inset 0 0 3px 2px rgba(0, 0, 0, 0.4);
+}
+
+.sell-modal__submit:disabled {
+  background: rgb(var(--accent-rgb) / 0.24);
+  color: var(--text-dim);
+  cursor: default;
+}
+
+/* --- Наши состояния, которых нет в макете дизайнера --- */
+
+/* Пока идёт выставление — блокируем обе кнопки и ввод */
+.sell-modal__cancel:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.sell-modal__input:disabled {
+  opacity: 0.6;
+}

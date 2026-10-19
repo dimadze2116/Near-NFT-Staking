@@ -1,121 +1,128 @@
-# NEAR NFT Staking Bot
+# NEAR Legion — NFT Staking & Marketplace
 
-**Bot:** [@NearNFTStaking_bot](https://t.me/NearNFTStaking_bot)
+NFT staking and a peer-to-peer marketplace for the **NEAR Legion** collection, delivered entirely inside Telegram as a Mini App. Live on NEAR mainnet with real users and real assets.
 
-Telegram bot and Mini App for the **NEAR Legion** NFT collection (`nearlegion.nfts.tg`): NFT-gated access to a private channel, on-chain staking, and a peer-to-peer marketplace.
+| Component | Mainnet account |
+| --- | --- |
+| Staking contract | [`legion-staking.near`](https://nearblocks.io/address/legion-staking.near) |
+| Marketplace contract | [`legion-marketplace.near`](https://nearblocks.io/address/legion-marketplace.near) |
+| NFT collection | [`nearlegion.nfts.tg`](https://nearblocks.io/address/nearlegion.nfts.tg) (NEP-171) |
 
-## What the project does
+Bot: [@NearNFTStaking_bot](https://t.me/NearNFTStaking_bot)
 
-- Verifies NFT ownership through a NEAR wallet
-- Verifies Telegram users through `initData`
-- Grants access to a private channel only for approved users
-- Opens a Mini App for staking and trading NFTs
-- Shows active stakes, reward pool, leaderboard, and reward preview
-- Runs a marketplace with escrow: list, cancel, buy (up to 4 NFTs per purchase)
-- Sends notifications: matured stakes (daily cron) and NFT sales
-- Prevents NFT loss when the reward pool is empty
+---
 
-## On-chain
+## What it looks like
 
-Both contracts are deployed to NEAR **mainnet** and are written in Rust.
+| Staking | Marketplace | Cart |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/01-stake.jpg" width="240"> | <img src="docs/screenshots/02-marketplace.jpg" width="240"> | <img src="docs/screenshots/03-cart.jpg" width="240"> |
+| Pick NFTs and a period, see the reward before signing | Listings with per-item actions — the seller sees *Cancel*, everyone else *Add to cart* | Up to 4 NFTs bought in one transaction and one signature |
 
-| Contract | Account | Purpose |
-| --- | --- | --- |
-| Staking | `legion-staking.near` | Stake NFTs for 7/14/30 days, tiered APR, leaderboard |
-| Marketplace | `legion-marketplace.near` | Escrow listings, 0.5% fee, multi-item cart |
-| NFT collection | `nearlegion.nfts.tg` | The collection itself (third-party, NEP-171) |
+| Leaderboard | Details |
+|:---:|:---:|
+| <img src="docs/screenshots/04-leaderboard.jpg" width="240"> | <img src="docs/screenshots/05-details.jpg" width="240"> |
+| Ranked by active stakes, wallet names masked for privacy | Tiered APR table and live contract addresses |
 
-## Main user flow
+---
 
-1. User opens the bot and connects a NEAR wallet, signing a message (NEP-413)
-2. The bot checks NFT ownership on-chain
-3. If the NFT is present, access to the private channel is granted
-4. The user opens the Mini App with `/stake`
-5. Staking: select NFTs and a period, sent via `nft_transfer_call`
-6. If the reward pool is sufficient, the stake is created; if not, the NFT is returned safely
-7. Marketplace: list an NFT for sale, cancel a listing, or buy up to 4 NFTs in one transaction
-8. Notifications arrive when a stake matures or an NFT is sold
+## What it does
 
-## Components
+A holder of a NEAR Legion NFT connects their wallet inside Telegram, proves ownership on-chain, and gets access to a private channel. From the same Mini App they can:
 
-### Telegram bot
+- **Stake NFTs** for 7, 14 or 30 days at a tiered APR, up to 4 at a time
+- **Trade NFTs** on an escrow marketplace — list, cancel, or buy up to 4 in a single transaction
+- **Track** active stakes, reward pool, leaderboard and personal rank
+- **Get notified** when a stake matures or an NFT sells
 
-User commands: `/start`, `/status`, `/stake`, `/mystakes`, `/claim`, `/pool`, `/whoami`, `/lang`, `/help`
+Rewards are reserved from the pool at the moment a stake is created, so every payout is funded before it is promised. If the pool cannot cover a new stake, the NFT is returned to the sender instead of being locked.
 
-Admin menu (inline): pool, stakes, claims, users, status, restart, start/stop, health.
+---
 
-Two admin actions — reward pool top-up (`/deposittopup`) and withdrawal (`/withdrawpool`) — **do not execute transactions**. They return a ready-to-paste `near-cli` command with the amount already converted to yoctoNEAR. This is deliberate: the contract owner is the contract account itself, holding a single full-access key, so keeping that key in a server environment variable would mean full control over the contract, not just pool management.
+## Why it's interesting
+
+**Onboarding without the usual cliff.** No browser extension, no seed-phrase literacy. A Telegram user taps a button, signs once with a wallet that already lives on their phone, and is in. This is NEAR's abstracted-onboarding thesis in a working product rather than a deck.
+
+**It survived contact with reality.** The contracts hold third-party assets and have been through an internal security review that found 15 issues — including one that let an approved account steal someone else's NFT. Fourteen are fixed and redeployed; the process is documented in [`docs/SECURITY.md`](docs/SECURITY.md).
+
+**Decisions are measured, not guessed.** The 4-item cart limit is derived from actual mainnet gas consumption (`nft_transfer` on this collection burns 3.53 TGas, not the 50 originally reserved). The reasoning behind each non-obvious constraint is written down.
+
+---
+
+## Repository layout
+
+```
+contracts/
+  staking/        Rust, near-sdk 5.1 — staking, tiered APR, leaderboard
+  marketplace/    Rust, near-sdk 5.1 — escrow listings, cart purchase, 0.5% fee
+bot/
+  src/            TypeScript — Telegram bot, REST API, cron, SQLite
+app/
+  src/            React + Vite — the Telegram Mini App
+docs/
+  ARCHITECTURE.md How the pieces fit together
+  SECURITY.md     The review, what it found, how it was fixed
+  DEPLOYMENT.md   Build and deploy, including the non-obvious parts
+```
+
+---
+
+## Running it
+
+### Contracts
+
+```bash
+cd contracts/staking      # or contracts/marketplace
+cargo near build non-reproducible-wasm --no-abi
+```
+
+Only this command produces a working binary — see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for why a plain `cargo build` compiles, deploys, and then traps.
+
+### Bot
+
+```bash
+cd bot
+cp ../.env.example .env   # fill in your own values
+npm install
+npm run build
+npm start
+```
 
 ### Mini App
 
-React app built with Vite, served as `public/newapp.html`.
+```bash
+cd app
+npm install
+npm run dev               # or: npm run build
+```
 
-- NEAR wallet connection via `@hot-labs/near-connect`
-- Staking flow with period selection and reward preview
-- Marketplace: listings grid, sell dialog, cart, purchase
-- Leaderboard and personal rank
-- 6 colour palettes × light/dark theme
-- iOS viewport handling (`viewport-fit=cover`, `--tg-vh`)
+The Mini App needs Telegram's `initData` to authenticate, so wallet connection and transactions only work when opened through the bot. Opened directly in a browser it renders, but cannot sign.
 
-### Staking contract (`legion-staking.near`)
+---
 
-Public methods:
-`nft_on_transfer`, `unstake`, `deposit_rewards`, `withdraw_rewards`, `prune_claimed_stakes`, `admin_return_nft`, `preview_reward`, `get_stake`, `get_stakes_for_account`, `get_reward_pool`, `get_apr_bps`, `get_contract_stats`, `get_leaderboard`, `get_my_rank`, `get_claimed_stakes`, `get_claimed_stakes_count`, `get_claimed_stake_ids`, `get_unique_claimers_count`, `get_active_stakes_count`, `get_matured_stakes_count`, `get_total_staked`
+## Security posture
 
-Notes:
-- Stake ownership is derived from `previous_owner_id`, not `sender_id` — under NEP-171 these differ when NEP-178 approvals are used
-- Rewards are reserved from the pool at stake creation, so payouts are always covered
-- `unstake` returns the NFT and pays the reward, both under callbacks with rollback on failure
-- Owner methods require exactly 1 yoctoNEAR (`deposit_rewards` excluded — it takes an arbitrary deposit)
-- `admin_return_nft` sends the NFT to the owner recorded in state; the recipient is not a parameter, and the method only works 90 days after unlock
+No private keys live on the server. The contract owner is the contract account itself, holding a single full-access key — putting that in an environment variable would hand over the contract, not just the reward pool. Every state-changing operation is performed manually through `near-cli`; the bot generates the command and the administrator signs it.
 
-### Marketplace contract (`legion-marketplace.near`)
+Both contracts build with `overflow-checks = true` and `panic = "abort"`. Privileged methods require exactly 1 yoctoNEAR, so they cannot be called with a function-call access key. Emergency asset recovery reads the recipient from contract state rather than taking it as a parameter — the owner can trigger a return but cannot choose who receives the asset.
 
-Public methods:
-`nft_on_transfer`, `cancel_listing`, `buy_multiple`, `withdraw_fees`, `admin_return_listing`, `get_listing`, `get_listings`, `get_listings_by_seller`, `get_fees_collected`, `get_fee_bps`, `get_active_listings_count`, `get_marketplace_stats`
+Details, including the full list of findings, are in [`docs/SECURITY.md`](docs/SECURITY.md).
 
-Notes:
-- Listing price is passed in `msg` of `nft_transfer_call`, in yoctoNEAR
-- Fee is 0.5% (50 bps), taken from the sale and accumulated in `fees_collected`
-- Up to 4 items per purchase — a gas ceiling, not a product choice
-- Duplicate `token_ids` in one purchase are rejected: they would create an undeletable phantom listing
-- A failed NFT transfer refunds the buyer in full and puts the listing back on sale
-- `cancel_listing` requires exactly 1 yoctoNEAR
+---
 
-## Security
+## Status
 
-- Telegram `initData` is validated by signature
-- NEAR wallet identity is verified through a signed NEP-413 message
-- Nonces have limited lifetime
-- NFT verification happens before wallet persistence
-- An empty reward pool never burns or loses NFTs
-- The backend holds **no private keys** for the contracts: every state-changing operation is performed manually by an administrator via `near-cli`
-- Contracts are built with `overflow-checks = true` and `panic = "abort"`
-- Both contracts went through an internal security review; findings were fixed and redeployed
+Live on mainnet. A formal third-party audit has not been commissioned — at current volumes that would be premature, and it is the natural next step as the project scales.
 
-## Tech stack
+## License
 
-Node.js · TypeScript · Telegraf · Express · near-api-js (RPC views) · near-kit (signature verification) · SQLite via `sql.js` · React + Vite · Rust `near-sdk` 5.1
+MIT — see [`LICENSE`](LICENSE).
 
-## Deployment
-
-- Bot and Mini App: [Render](https://nft-staking-bot.onrender.com), auto-deploy from `main`, persistent disk mounted at `/opt/render/project/src/data` for the SQLite file
-- Design previews: Netlify draft deploys (production deploys consume credits, drafts do not)
-
-## Key files
-
-- `src/bot.ts` — Telegram bot logic and admin menu
-- `src/server.ts` — API, webhook, `initData` verification
-- `src/near.ts` — NEAR RPC helpers (read-only)
-- `src/db.ts` — SQLite storage
-- `src/cron.ts` — daily checks at 08:00 and 20:00
-- `contract/src/lib.rs` — staking contract
-- `public/newapp.html` — Mini App entry point (built React app)
-- `ROADMAP.md` — full development history and open items
+---
 
 ## Made
 
-IronClaw - local version
+IronClaw — local version
 
 AI:
 1. DeepSeek V4 Flash from DeepSeek

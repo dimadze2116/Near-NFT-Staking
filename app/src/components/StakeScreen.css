@@ -1,0 +1,187 @@
+.stake-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--screen-gradient);
+}
+
+.stake-screen__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgb(var(--scrim-rgb) / 0) 0px,
+    rgb(var(--scrim-rgb) / 0) 203px,
+    rgb(var(--scrim-rgb) / 1) calc(100% - 229px),
+    rgb(var(--scrim-rgb) / 0.12) calc(100% - 77px)
+  );
+}
+
+.stake-screen__scroll {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Докрутка до края не должна пробиваться в html/body (scroll chaining) —
+     иначе на мобильных дёргается тулбар браузера, и абсолютно
+     спозиционированная нижняя группа (период + кнопка стейка) съезжает */
+  overscroll-behavior-y: contain;
+  padding: 191px 20px 139px;
+  box-sizing: border-box;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 70px,
+    black 200px,
+    black calc(100% - 88px),
+    rgba(0, 0, 0, 0.12) calc(100% - 40px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 70px,
+    black 200px,
+    black calc(100% - 88px),
+    rgba(0, 0, 0, 0.12) calc(100% - 40px),
+    transparent 100%
+  );
+}
+
+.stake-screen__scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.stake-screen__scroll--compact {
+  padding-bottom: 88px;
+}
+
+/* Лидерборд: закреплённый блок «мой ранг» над навбаром съедает низ —
+   даём запас, чтобы последняя строка выезжала над ним */
+.stake-screen__scroll--rank {
+  padding-bottom: 128px;
+}
+
+/* Свап вкладок: оба экрана в одной grid-ячейке, встречный кроссфейд
+   со слайдом — старый ещё виден, пока новый проявляется, пустого кадра нет */
+.stake-screen__stack {
+  display: grid;
+}
+
+.stake-screen__stack > .stake-screen__content {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+.stake-screen__content--out-left {
+  animation: tab-exit-left 0.24s ease both;
+  pointer-events: none;
+}
+
+.stake-screen__content--out-right {
+  animation: tab-exit-right 0.24s ease both;
+  pointer-events: none;
+}
+
+.stake-screen__content--in-left {
+  animation: tab-enter-left 0.28s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+.stake-screen__content--in-right {
+  animation: tab-enter-right 0.28s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+@keyframes tab-exit-left {
+  to {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+
+@keyframes tab-exit-right {
+  to {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+
+@keyframes tab-enter-left {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+
+@keyframes tab-enter-right {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+
+.stake-screen__header {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Обёртка по ширине содержимого (плашки периода) — чтобы кнопка Select All
+   могла встать вплотную к её правому краю */
+.stake-screen__periods-wrap {
+  position: relative;
+  width: fit-content;
+}
+
+/* Над плашкой периода, правый край в край с ней; тот же gap (4px), что между
+   плашкой периода и кнопкой Stake. Анимация появления/ухода — на самой кнопке
+   (см. .nft-stake-button--slide-in), не на этой обёртке */
+.stake-screen__select-all {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  margin-bottom: 4px;
+}
+
+.stake-screen__header > * {
+  pointer-events: auto;
+}
+
+.stake-screen__bottom {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 30px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.stake-screen__bottom > * {
+  pointer-events: auto;
+}
+
+/* Когда снизу появился флоу — резервируем место под него */
+.stake-screen__scroll--flow {
+  padding-bottom: 250px;
+}
+
+/* То же для плашки корзины над навбаром */
+.stake-screen__scroll--cart {
+  padding-bottom: 300px;
+}

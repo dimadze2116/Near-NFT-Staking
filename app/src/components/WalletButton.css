@@ -1,0 +1,184 @@
+.wallet-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 112px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgb(var(--surface-sunken-rgb) / 0.16);
+  border: 0.2px solid #fff;
+  cursor: pointer;
+  font-family: -apple-system, "SF Pro Display", "Segoe UI", sans-serif;
+  color: var(--text-strong);
+}
+
+.wallet-button--connect {
+  flex-direction: column;
+  padding: 8px 34px;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* На узких экранах кнопка компактнее, чтобы не переносилась под заголовок */
+@media (max-width: 379.98px) {
+  .wallet-button {
+    width: 96px;
+    height: 34px;
+  }
+
+  .wallet-button--connect {
+    padding: 5px 20px;
+    font-size: 9px;
+  }
+}
+
+.wallet-button--connected,
+.wallet-button--reconnect,
+.wallet-button--confirm {
+  gap: 15px;
+}
+
+/* Регистрируем угол, чтобы браузер умел его анимировать */
+@property --wallet-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* Общее стекло для всех подключённых состояний: блюр + inset-кант.
+   Цвет бегущего блика и свечения задаётся переменными на состоянии. */
+.wallet-button--connect,
+.wallet-button--connected,
+.wallet-button--reconnect,
+.wallet-button--confirm {
+  border-color: transparent;
+  backdrop-filter: blur(14.5px);
+  -webkit-backdrop-filter: blur(14.5px);
+  box-shadow:
+    inset -1px -1px 1px -1px rgba(255, 255, 255, 0.2),
+    inset 1px 1px 1px -1px rgba(255, 255, 255, 0.2);
+}
+
+.wallet-button--connect {
+  --glint-color: rgb(var(--accent-soft-rgb) / 0.5);
+  --glow-color: rgb(var(--accent-soft-rgb) / 0.6);
+}
+
+/* Тёплый кант: состояние, требующее внимания пользователя
+   (--confirm — переспрашиваем перед отключением кошелька). */
+.wallet-button--reconnect,
+.wallet-button--confirm {
+  --glint-color: rgba(238, 228, 190, 0.4);
+  --glow-color: rgba(238, 228, 190, 0.4);
+}
+
+/* Переливающийся кант: светлый блик бежит по периметру, свечение едет с ним */
+.wallet-button--connect::before,
+.wallet-button--reconnect::before,
+.wallet-button--confirm::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--wallet-angle),
+    rgba(255, 255, 255, 0) 0deg,
+    var(--glint-color) 35deg,
+    rgba(255, 255, 255, 0.9) 60deg,
+    var(--glint-color) 85deg,
+    rgba(255, 255, 255, 0) 120deg,
+    rgba(255, 255, 255, 0) 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  filter: drop-shadow(0 0 5px var(--glow-color));
+  pointer-events: none;
+  animation: wallet-ring-spin 5s linear infinite;
+}
+
+@keyframes wallet-ring-spin {
+  to {
+    --wallet-angle: 360deg;
+  }
+}
+
+/* Connected: зелёные акценты только в диагональных углах (верх-лево / низ-право).
+   Радиальные пятна на кольце-маске красят кант лишь у этих двух углов; слегка "дышит". */
+.wallet-button--connected::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.2px;
+  background:
+    radial-gradient(circle 22px at top left, rgba(205, 245, 215, 0.9) 0%, rgba(205, 245, 215, 0) 100%),
+    radial-gradient(circle 22px at bottom right, rgba(205, 245, 215, 0.9) 0%, rgba(205, 245, 215, 0) 100%);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: wallet-corner-breathe 4.5s ease-in-out infinite;
+}
+
+@keyframes wallet-corner-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wallet-button--connect::before,
+  .wallet-button--connected::before,
+  .wallet-button--reconnect::before,
+  .wallet-button--confirm::before {
+    animation: none;
+  }
+}
+
+.wallet-button__info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.wallet-button__address {
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.wallet-button__status {
+  font-size: 6px;
+  font-weight: 600;
+}
+
+.wallet-button--connected .wallet-button__address,
+.wallet-button--connected .wallet-button__status {
+  color: #cdead5;
+}
+
+.wallet-button--reconnect .wallet-button__address,
+.wallet-button--reconnect .wallet-button__status,
+.wallet-button--confirm .wallet-button__address,
+.wallet-button--confirm .wallet-button__status {
+  color: #e6dcc0;
+}

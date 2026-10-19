@@ -1,0 +1,276 @@
+/* ── Система тем ────────────────────────────────────────────────────────
+   Цветовая палитра. Значения — RGB-триплеты (через пробел), чтобы одну базу
+   переиспользовать с любой прозрачностью: rgb(var(--accent-rgb) / 0.74).
+   Переключается атрибутом [data-palette] на <html> (см. ThemeContext.jsx).
+   Дефолт — Violet (исходный дизайн, ничего визуально не меняется). */
+:root {
+  --accent-rgb: 133 101 250; /* основная заливка кнопок (#8565fa) */
+  --accent-light-rgb: 208 195 255; /* значения, бордеры, прогресс, свечения (#d0c3ff) */
+  --accent-soft-rgb: 174 154 243; /* блики/перелив канта, активный таб (#ae9af3) */
+  --accent-text-hi-rgb: 233 227 255; /* светлый текст на залитых кнопках (#e9e3ff) */
+  --accent-bg-glow-rgb: 122 97 255; /* фоновое свечение рамки на десктопе */
+  --ambient-rgb: 76 109 93; /* плавающее пятно-перелив на стёклах */
+  --glass-a-rgb: 83 76 109; /* тон «стекла», старт градиента */
+  --glass-b-rgb: 99 88 138; /* тон «стекла», конец градиента */
+
+  /* Базовые поверхности/текст — зависят от режима [data-mode]. Тёмные значения
+     здесь = исходному дизайну, поэтому dark не меняется. Светлые — в блоке
+     :root[data-mode="light"] ниже. Белые кромки-подсветки и чёрные тени в обеих
+     темах одинаковы, поэтому остаются захардкоженными в компонентах. */
+  --text-strong: #fff;
+  --text-title: #e2e2e2;
+  --text-dim: #c9c9c9;
+  --text-soft: #d4cef2;
+  --surface-sunken-rgb: 0 0 0; /* «утопленные» плитки/лунки (alpha 0.1–0.33) */
+  --chip-rgb: 255 255 255; /* фон мелких бейджей «YOU» */
+  --progress-track: #2b2b2b;
+
+  /* Фон страницы (десктопная рамка) и «сцены» под скроллом — тоже по режиму */
+  --stage-base: rgb(5, 4, 10);
+  --stage-gradient: linear-gradient(225.862deg, rgb(4, 8, 17) 3.6267%, rgb(16, 10, 27) 103.58%);
+  --screen-gradient: linear-gradient(225.862deg, rgb(2, 5, 11) 3.6267%, rgb(12, 7, 21) 103.58%);
+  --scrim-rgb: 0 0 0;
+}
+
+:root[data-palette="emerald"] {
+  --accent-rgb: 46 190 130;
+  --accent-light-rgb: 190 245 218;
+  --accent-soft-rgb: 120 224 176;
+  --accent-text-hi-rgb: 227 255 243;
+  --accent-bg-glow-rgb: 52 211 153;
+  --ambient-rgb: 109 82 100;
+  --glass-a-rgb: 70 96 86;
+  --glass-b-rgb: 84 120 104;
+}
+
+:root[data-palette="cyan"] {
+  --accent-rgb: 56 178 214;
+  --accent-light-rgb: 190 235 248;
+  --accent-soft-rgb: 120 206 232;
+  --accent-text-hi-rgb: 224 248 255;
+  --accent-bg-glow-rgb: 56 189 248;
+  --ambient-rgb: 115 92 82;
+  --glass-a-rgb: 68 92 104;
+  --glass-b-rgb: 80 110 126;
+}
+
+:root[data-palette="amber"] {
+  --accent-rgb: 233 160 54;
+  --accent-light-rgb: 250 226 176;
+  --accent-soft-rgb: 240 200 120;
+  --accent-text-hi-rgb: 255 245 224;
+  --accent-bg-glow-rgb: 245 175 60;
+  --ambient-rgb: 84 100 122;
+  --glass-a-rgb: 100 90 72;
+  --glass-b-rgb: 122 108 82;
+}
+
+:root[data-palette="onyx"] {
+  --accent-rgb: 96 100 116;
+  --accent-light-rgb: 208 212 222;
+  --accent-soft-rgb: 176 180 194;
+  --accent-text-hi-rgb: 236 238 244;
+  --accent-bg-glow-rgb: 140 144 160;
+  --ambient-rgb: 88 90 100;
+  --glass-a-rgb: 58 60 70;
+  --glass-b-rgb: 74 76 88;
+}
+
+:root[data-palette="crimson"] {
+  --accent-rgb: 232 66 74;
+  --accent-light-rgb: 255 190 194;
+  --accent-soft-rgb: 244 138 144;
+  --accent-text-hi-rgb: 255 228 230;
+  --accent-bg-glow-rgb: 244 63 94;
+  --ambient-rgb: 82 104 116;
+  --glass-a-rgb: 104 74 78;
+  --glass-b-rgb: 122 82 88;
+}
+
+/* ── Светлая тема ─────────────────────────────────────────────────────────
+   [data-mode="light"] переопределяет базовые поверхности/текст и «стекло»
+   (общее матовое белое для всех оттенков). Заливки/светлый-текст-на-кнопках
+   (--accent-rgb, --accent-text-hi-rgb) наследуются от [data-palette] и работают
+   на светлом фоне. Оттеночные же переменные (цветной текст, блики, свечение,
+   перелив) для читаемости на светлом фоне переопределяются ниже по палитрам. */
+:root[data-mode="light"] {
+  color-scheme: light;
+
+  --text-strong: #201a2e;
+  --text-title: #2a2340;
+  --text-dim: #6a6380;
+  --text-soft: #4d4666;
+  --surface-sunken-rgb: 74 64 104;
+  --chip-rgb: 60 52 90;
+  --progress-track: #ded9ec;
+
+  --glass-a-rgb: 255 255 255;
+  --glass-b-rgb: 244 242 252;
+
+  --stage-base: rgb(211, 207, 227);
+  --stage-gradient: linear-gradient(225.862deg, rgb(214, 210, 230) 3.6267%, rgb(201, 197, 221) 103.58%);
+  --screen-gradient: linear-gradient(225.862deg, rgb(212, 208, 228) 3.6267%, rgb(199, 195, 219) 103.58%);
+  --scrim-rgb: 206 202 224;
+}
+
+/* Оттеночные переменные светлой темы: цветной текст/акценты уходят в более
+   глубокий тон того же оттенка (контраст на светлом). «Стекло» тонируется
+   в свой оттенок, а перелив — в комплементарный. --glass-* из базового
+   light-блока служат лишь фолбэком. */
+:root[data-palette="violet"][data-mode="light"] {
+  --accent-light-rgb: 124 92 246;
+  --accent-soft-rgb: 138 108 242;
+  --accent-bg-glow-rgb: 150 120 250;
+  --ambient-rgb: 150 176 160;
+  --glass-a-rgb: 243 239 255;
+  --glass-b-rgb: 225 214 250;
+  --stage-base: rgb(211, 207, 227);
+  --stage-gradient: linear-gradient(225.862deg, rgb(214, 210, 230) 3.6267%, rgb(201, 197, 221) 103.58%);
+  --screen-gradient: linear-gradient(225.862deg, rgb(212, 208, 228) 3.6267%, rgb(199, 195, 219) 103.58%);
+  --scrim-rgb: 206 202 224;
+}
+
+:root[data-palette="emerald"][data-mode="light"] {
+  --accent-light-rgb: 20 148 100;
+  --accent-soft-rgb: 26 160 112;
+  --accent-bg-glow-rgb: 52 200 145;
+  --ambient-rgb: 178 150 168;
+  --glass-a-rgb: 235 251 243;
+  --glass-b-rgb: 209 240 225;
+  --stage-base: rgb(204, 221, 213);
+  --stage-gradient: linear-gradient(225.862deg, rgb(207, 223, 215) 3.6267%, rgb(194, 213, 204) 103.58%);
+  --screen-gradient: linear-gradient(225.862deg, rgb(205, 221, 213) 3.6267%, rgb(193, 211, 203) 103.58%);
+  --scrim-rgb: 199 216 208;
+}
+
+:root[data-palette="cyan"][data-mode="light"] {
+  --accent-light-rgb: 20 138 176;
+  --accent-soft-rgb: 32 150 186;
+  --accent-bg-glow-rgb: 60 185 232;
+  --ambient-rgb: 188 158 148;
+  --glass-a-rgb: 233 248 252;
+  --glass-b-rgb: 205 236 246;
+  --stage-base: rgb(202, 219, 226);
+  --stage-gradient: linear-gradient(225.862deg, rgb(205, 221, 228) 3.6267%, rgb(192, 210, 218) 103.58%);
+  --screen-gradient: linear-gradient(225.862deg, rgb(203, 219, 226) 3.6267%, rgb(191, 209, 217) 103.58%);
+  --scrim-rgb: 197 214 222;
+}
+
+:root[data-palette="amber"][data-mode="light"] {
+  --accent-light-rgb: 176 118 20;
+  --accent-soft-rgb: 190 132 34;
+  --accent-bg-glow-rgb: 240 180 70;
+  --ambient-rgb: 152 168 190;
+  --glass-a-rgb: 252 246 231;
+  --glass-b-rgb: 246 231 204;
+  --stage-base: rgb(226, 219, 204);
+  --stage-gradient: linear-gradient(225.862deg, rgb(228, 221, 206) 3.6267%, rgb(219, 210, 190) 103.58%);
+  --screen-gradient: linear-gradient(225.862deg, rgb(226, 219, 204) 3.6267%, rgb(217, 208, 189) 103.58%);
+  --scrim-rgb: 221 213 197;
+}
+
+:root[data-palette="onyx"][data-mode="light"] {
+  --accent-light-rgb: 82 86 100;
+  --accent-soft-rgb: 96 100 116;
+  --accent-bg-glow-rgb: 150 154 170;
+  --ambient-rgb: 168 170 180;
+  --glass-a-rgb: 244 245 250;
+  --glass-b-rgb: 227 229 238;
+  --stage-base: rgb(214, 216, 222);
+  --stage-gradient: linear-gradient(225.862deg, rgb(216, 218, 224) 3.6267%, rgb(204, 206, 213) 103.58%);
+  --screen-gradient: linear-gradient(225.862deg, rgb(214, 216, 222) 3.6267%, rgb(202, 204, 211) 103.58%);
+  --scrim-rgb: 208 210 217;
+}
+
+:root[data-palette="crimson"][data-mode="light"] {
+  --accent-light-rgb: 200 40 52;
+  --accent-soft-rgb: 214 60 72;
+  --accent-bg-glow-rgb: 244 90 110;
+  --ambient-rgb: 160 182 190;
+  --glass-a-rgb: 254 241 242;
+  --glass-b-rgb: 249 223 226;
+  --stage-base: rgb(227, 210, 214);
+  --stage-gradient: linear-gradient(225.862deg, rgb(229, 212, 216) 3.6267%, rgb(220, 200, 205) 103.58%);
+  --screen-gradient: linear-gradient(225.862deg, rgb(227, 210, 214) 3.6267%, rgb(218, 199, 204) 103.58%);
+  --scrim-rgb: 222 204 209;
+}
+
+/* Отрыв «стекла» от светлого фона: мягкая тень + тонкая кромка. В тёмной теме
+   это не нужно (фон сам тёмный), поэтому только для [data-mode="light"]. */
+:root[data-mode="light"] .header,
+:root[data-mode="light"] .sidebar-nav,
+:root[data-mode="light"] .details,
+:root[data-mode="light"] .leaderboard,
+:root[data-mode="light"] .admin,
+:root[data-mode="light"] .stake-card,
+:root[data-mode="light"] .staking-panel__row,
+:root[data-mode="light"] .nft-stake-button,
+:root[data-mode="light"] .toast,
+:root[data-mode="light"] .my-rank__glass,
+:root[data-mode="light"] .cart-modal__glass,
+:root[data-mode="light"] .sell-modal__glass,
+:root[data-mode="light"] .wallet-button,
+:root[data-mode="light"] .language-button {
+  box-shadow:
+    0 0 10px rgb(56 46 92 / 0.16),
+    0 0 0 1px rgb(64 52 100 / 0.10);
+}
+
+/* «Утопленные» плашки (плитки карточек стейка, строки лидерборда, таблица APR,
+   админ-статы) заданы с тёмным alpha — на тёмной теме это в самый раз, но на
+   светлом стекле выходит грязным. В светлой теме приводим их к светлому тону. */
+:root[data-mode="light"] .header__stat,
+:root[data-mode="light"] .period-button,
+:root[data-mode="light"] .stake-card__stat,
+:root[data-mode="light"] .stake-card__withdraw,
+:root[data-mode="light"] .leaderboard__row,
+:root[data-mode="light"] .cart-modal__close,
+:root[data-mode="light"] .cart-modal__item,
+:root[data-mode="light"] .sell-modal__input-wrap,
+:root[data-mode="light"] .sell-modal__cancel,
+:root[data-mode="light"] .market-card__btn--in-cart,
+:root[data-mode="light"] .market-card__btn--cancel,
+:root[data-mode="light"] .details__apr-table,
+:root[data-mode="light"] .admin__stat,
+:root[data-mode="light"] .admin__row {
+  background: rgb(255 255 255 / 0.4);
+}
+
+/* Стеклянные кнопки/линза навбара — тот же светлый тон, чуть плотнее. */
+:root[data-mode="light"] .language-button,
+:root[data-mode="light"] .wallet-button,
+:root[data-mode="light"] .drop-indicator__drop--nav {
+  background: rgb(255 255 255 / 0.5);
+}
+
+/* Кнопка "Connect wallet" (состояние до подключения) — текст на светлом
+   стекле терялся (белый переливающийся блик поверх + недостаточный контраст).
+   Затемняем явно, отдельно от общего --text-strong, чтобы не задеть остальные
+   элементы, которые уже читаются нормально. */
+:root[data-mode="light"] .wallet-button--connect {
+  color: #201a2e;
+}
+
+/* Светлая тема: светло-зелёный/бежевый текст и мягкие светлые блики канта
+   подключённого кошелька теряются на светлом стекле — берём насыщенные тона. */
+:root[data-mode="light"] .wallet-button--connected .wallet-button__address,
+:root[data-mode="light"] .wallet-button--connected .wallet-button__status {
+  color: #167a48;
+}
+
+:root[data-mode="light"] .wallet-button--reconnect .wallet-button__address,
+:root[data-mode="light"] .wallet-button--reconnect .wallet-button__status {
+  color: #8a6a1e;
+}
+
+/* Угловые блики канта — темнее/насыщеннее, чтобы читались на белом стекле */
+:root[data-mode="light"] .wallet-button--connected::before {
+  background:
+    radial-gradient(circle 22px at top left, rgba(30, 140, 88, 0.85) 0%, rgba(30, 140, 88, 0) 100%),
+    radial-gradient(circle 22px at bottom right, rgba(30, 140, 88, 0.85) 0%, rgba(30, 140, 88, 0) 100%);
+}
+
+:root[data-mode="light"] .wallet-button--reconnect {
+  --glint-color: rgba(150, 118, 30, 0.5);
+  --glow-color: rgba(150, 118, 30, 0.5);
+}

@@ -1,0 +1,276 @@
+.leaderboard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 15px;
+  border-radius: 15px;
+  box-sizing: border-box;
+  font-family: -apple-system, "SF Pro Display", "Segoe UI", sans-serif;
+  font-weight: 800;
+}
+
+.leaderboard__glass {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgb(var(--glass-a-rgb) / 0.4);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  pointer-events: none;
+}
+
+.leaderboard__highlight {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset -1px -1px 1px -1px rgba(255, 255, 255, 0.45),
+    inset 1px 1px 1px -1px rgba(255, 255, 255, 0.45);
+}
+
+.leaderboard__title {
+  position: relative;
+  z-index: 1;
+  align-self: flex-start;
+  margin: 0;
+  font-family: -apple-system, "SF Pro Display", "Segoe UI", sans-serif;
+  font-weight: 800;
+  font-size: 20px;
+  color: var(--text-strong);
+}
+
+.leaderboard__list {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.leaderboard__row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 15px;
+  border-radius: 13px;
+  background-color: rgb(var(--surface-sunken-rgb) / 0.33);
+  border: 1px solid transparent;
+  box-sizing: border-box;
+}
+
+.leaderboard__row--gold {
+  --medal-glint: #fce89a;
+}
+
+.leaderboard__row--silver {
+  --medal-glint: #e9e9e9;
+}
+
+.leaderboard__row--bronze {
+  --medal-glint: #e3a97a;
+}
+
+.leaderboard__row--gold,
+.leaderboard__row--silver,
+.leaderboard__row--bronze {
+  position: relative;
+}
+
+/* Регистрируем угол — как --wallet-angle у кнопки Connect wallet */
+@property --medal-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* Тот же приём, что у Connect wallet: блик бежит по канту (маска-кольцо +
+   свечение). Обводка не круговая — угол колеблется туда-сюда (alternate),
+   блик ходит от верхнего края к нижнему и обратно. Единственная плавная
+   вершина без ярких границ — статичной обводки нет, только этот перелив. */
+.leaderboard__row--gold::before,
+.leaderboard__row--silver::before,
+.leaderboard__row--bronze::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 0.5px;
+  /* Широкая заливка почти всего периметра (верх+левый край+низ), плавный
+     провал у правого края (~90°) — визуально как «полная» медальная обводка */
+  background: conic-gradient(
+    from var(--medal-angle),
+    var(--medal-glint) 0deg,
+    transparent 78deg,
+    transparent 102deg,
+    var(--medal-glint) 180deg,
+    var(--medal-glint) 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  filter: drop-shadow(0 0 3px var(--medal-glint));
+  pointer-events: none;
+  /* ease-in-out — скорость плавно гаснет к концам, разворот без рывка */
+  animation: leaderboard-glint 4s ease-in-out infinite alternate;
+}
+
+/* Рассинхрон трёх строк — отрицательная задержка сдвигает фазу без ожидания */
+.leaderboard__row--silver::before {
+  animation-delay: -1.4s;
+}
+
+.leaderboard__row--bronze::before {
+  animation-delay: -2.8s;
+}
+
+/* Малая амплитуда — вся заливка лишь слегка колышется туда-сюда,
+   провал у правого края чуть смещается вверх-вниз */
+@keyframes leaderboard-glint {
+  from {
+    --medal-angle: -16deg;
+  }
+  to {
+    --medal-angle: 16deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaderboard__row--gold::before,
+  .leaderboard__row--silver::before,
+  .leaderboard__row--bronze::before {
+    animation: none;
+  }
+}
+
+.leaderboard__left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 0;
+}
+
+.leaderboard__position {
+  font-size: 20px;
+  color: var(--text-strong);
+  white-space: nowrap;
+}
+
+.leaderboard__name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  color: var(--text-strong);
+}
+
+.leaderboard__username {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderboard__you {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgb(var(--chip-rgb) / 0.2);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-strong);
+}
+
+/* Регистрируем угол — тот же приём, что и --wallet-angle у кнопки Connect wallet */
+@property --leaderboard-you-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* Обводка строки «ты» — точь-в-точь как переливающийся кант Connect wallet
+   (.wallet-button--connect::before): тот же конус-градиент, маска-кольцо,
+   свечение и скорость вращения, только на строке лидерборда */
+.leaderboard__row-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--leaderboard-you-angle),
+    rgba(255, 255, 255, 0) 0deg,
+    rgb(var(--accent-soft-rgb) / 0.5) 35deg,
+    rgba(255, 255, 255, 0.9) 60deg,
+    rgb(var(--accent-soft-rgb) / 0.5) 85deg,
+    rgba(255, 255, 255, 0) 120deg,
+    rgba(255, 255, 255, 0) 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  filter: drop-shadow(0 0 5px rgb(var(--accent-soft-rgb) / 0.6));
+  pointer-events: none;
+  animation: leaderboard-you-ring-spin 5s linear infinite;
+}
+
+@keyframes leaderboard-you-ring-spin {
+  to {
+    --leaderboard-you-angle: 360deg;
+  }
+}
+
+/* Клик по нижней плашке моего ранга — яркая вспышка на всю строку,
+   которая быстро гаснет, а под ней уже видна обводка Connect wallet
+   (та крутится непрерывно и вспышку не ждёт) */
+.leaderboard__row--flash {
+  animation: leaderboard-you-flash 0.7s ease;
+}
+
+@keyframes leaderboard-you-flash {
+  0% {
+    box-shadow: 0 0 20px 6px rgb(var(--accent-soft-rgb) / 0.95);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(var(--accent-soft-rgb) / 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaderboard__row--flash,
+  .leaderboard__row-glow {
+    animation: none;
+  }
+}
+
+.leaderboard__nft-count {
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.leaderboard__reward {
+  font-size: 16px;
+  color: rgb(var(--accent-light-rgb));
+  white-space: nowrap;
+  flex-shrink: 0;
+}

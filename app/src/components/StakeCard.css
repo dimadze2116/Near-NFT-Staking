@@ -1,0 +1,148 @@
+.stake-card {
+  position: relative;
+  width: 100%;
+  container-type: inline-size;
+  aspect-ratio: 362 / 290;
+  border-radius: 15px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-family: -apple-system, "SF Pro Display", "Segoe UI", sans-serif;
+  font-weight: 800;
+}
+
+.stake-card__bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.stake-card__title {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px;
+}
+
+.stake-card__badge {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgb(var(--glass-a-rgb) / 0.4);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow:
+    inset -1px -1px 1px -1px rgba(255, 255, 255, 0.45),
+    inset 1px 1px 1px -1px rgba(255, 255, 255, 0.45);
+  color: var(--text-strong);
+  font-size: 14px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.stake-card__badge--days {
+  min-width: 31px;
+}
+
+.stake-card__stake {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 15px;
+  background: rgb(var(--glass-a-rgb) / 0.4);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  box-shadow:
+    inset -1px -1px 1px -1px rgba(255, 255, 255, 0.45),
+    inset 1px 1px 1px -1px rgba(255, 255, 255, 0.45);
+  border-radius: 13px;
+}
+
+.stake-card__stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(4px, 2.5cqw, 8px);
+  width: 100%;
+  text-align: center;
+}
+
+.stake-card__stat {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 5px clamp(4px, 3cqw, 10px);
+  border-radius: 10px;
+  background: rgb(var(--surface-sunken-rgb) / 0.33);
+}
+
+.stake-card__stat-label {
+  font-size: clamp(9px, 3.5cqw, 11px);
+  font-weight: 800;
+  color: var(--text-strong);
+  white-space: nowrap;
+}
+
+.stake-card__stat-value {
+  font-size: clamp(13px, 6cqw, 20px);
+  color: rgb(var(--accent-light-rgb));
+  white-space: nowrap;
+}
+
+.stake-card__progress {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 8px;
+}
+
+.stake-card__progress-track,
+.stake-card__progress-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 8px;
+  border-radius: 4px;
+}
+
+.stake-card__progress-track {
+  width: 100%;
+  background: var(--progress-track);
+}
+
+.stake-card__progress-fill {
+  background: rgb(var(--accent-light-rgb));
+}
+
+.stake-card__withdraw {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 10px;
+  background: rgb(var(--surface-sunken-rgb) / 0.33);
+}
+
+.stake-card__withdraw-text {
+  font-size: 14px;
+  color: rgb(var(--accent-light-rgb));
+  white-space: nowrap;
+}

@@ -1,0 +1,116 @@
+.admin {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 15px;
+  border-radius: 15px;
+  box-sizing: border-box;
+  font-family: -apple-system, "SF Pro Display", "Segoe UI", sans-serif;
+  color: var(--text-strong);
+}
+
+.admin__glass {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgb(var(--glass-a-rgb) / 0.4);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  pointer-events: none;
+}
+
+.admin__highlight {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset -1px -1px 1px -1px rgba(255, 255, 255, 0.45),
+    inset 1px 1px 1px -1px rgba(255, 255, 255, 0.25);
+}
+
+.admin__section {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin__heading {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.admin__stats-row {
+  display: flex;
+  gap: 10px;
+}
+
+.admin__stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 13px;
+  background: rgb(var(--surface-sunken-rgb) / 0.33);
+}
+
+.admin__stat-value {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.admin__stat-label {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.admin__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 13px;
+  background: rgb(var(--surface-sunken-rgb) / 0.33);
+  margin-bottom: 6px;
+}
+
+.admin__row-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin__row-owner {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin__row-meta {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.admin__row-reward {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fce89a;
+  white-space: nowrap;
+  padding-left: 10px;
+}
+
+.admin__empty {
+  padding: 20px;
+  text-align: center;
+  opacity: 0.6;
+  font-size: 13px;
+}

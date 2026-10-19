@@ -1,0 +1,46 @@
+.app-stage {
+  width: 100%;
+  height: 100vh;
+  /* svh (не dvh) — размер не должен меняться, когда на мобильных при скролле
+     прячется/появляется тулбар браузера: dvh пересчитывался бы вместе с ним,
+     это ловил бы ResizeObserver в StakeScreen и двигал нижнюю группу
+     (период + кнопка стейка), создавая "прыжок" */
+  height: 100svh;
+  /* Внутри настоящего Telegram — точная высота его листа (см. main.jsx).
+     Вне Telegram (обычный браузер) переменная не установлена, работает
+     фолбэк 100svh выше. */
+  height: var(--tg-vh, 100svh);
+}
+
+.app-stage__frame {
+  width: 100%;
+  height: 100%;
+}
+
+@media (min-width: 700px) {
+  /* ВАЖНО: рамку нельзя центрировать через flex, и у .app-stage не должно быть
+     overflow:hidden — в Chromium любая из этих двух вещей на смещённом предке
+     ломает backdrop-filter у всех вложенных стёкол (хедер, навбар, карточки).
+     Поэтому центрируем блочно через margin:auto, а клип оставляем только на рамке. */
+  .app-stage {
+    background-color: var(--stage-base);
+    background-image:
+      radial-gradient(120% 90% at 50% 50%, rgb(var(--scrim-rgb) / 0) 40%, rgb(var(--scrim-rgb) / 0.55) 100%),
+      radial-gradient(55% 48% at 28% 0%, rgb(var(--accent-bg-glow-rgb) / 0.22) 0%, rgb(var(--accent-bg-glow-rgb) / 0) 70%),
+      radial-gradient(55% 48% at 72% 0%, rgb(var(--accent-bg-glow-rgb) / 0.16) 0%, rgb(var(--accent-bg-glow-rgb) / 0) 70%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72'%3E%3Cpath d='M36 30v12M30 36h12' stroke='%23d0c3ff' stroke-opacity='0.14' stroke-width='2'/%3E%3C/svg%3E"),
+      var(--stage-gradient);
+  }
+
+  .app-stage__frame {
+    width: 402px;
+    height: calc(100% - 80px);
+    max-height: 874px;
+    margin: 40px auto;
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgb(var(--accent-light-rgb) / 0.12),
+      0 30px 80px rgba(0, 0, 0, 0.65);
+  }
+}
