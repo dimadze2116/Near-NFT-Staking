@@ -108,3 +108,109 @@ async fn only_the_owner_can_pause() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn marketplace_pause_blocks_listing_and_buying_but_never_cancel() -> anyhow::Result<()> {
+    let ctx = common::setup().await?;
+    ctx.mint_to_alice("6101").await?;
+    ctx.mint_to_alice("6102").await?;
+
+    // One listing exists before the pause.
+    ctx.list("6101", NearToken::from_near(1)).await?;
+
+    ctx.market
+        .call("pause")
+        .deposit(NearToken::from_yoctonear(1))
+        .gas(Gas::from_tgas(50))
+        .transact()
+        .await?
+        .into_result()?;
+    assert_eq!(
+        ctx.market
+            .view("is_paused")
+            .args_json(serde_json::json!({}))
+            .await?
+            .json::<bool>()?,
+        true
+    );
+
+    // New listings: refused, and the NFT comes back rather than sitting in a
+    // contract that has no listing for it.
+    ctx.list("6102", NearToken::from_near(1)).await?;
+    assert_eq!(
+        ctx.owner_of("6102").await?,
+        ctx.alice.id().to_string(),
+        "a paused marketplace must return the NFT"
+    );
+    assert_eq!(ctx.active_listings().await?, 1);
+
+    // Buying: refused. Here a panic is the right answer — nothing was charged.
+    let outcome = ctx
+        .bob
+        .call(ctx.market.id(), "buy_multiple")
+        .args_json(serde_json::json!({ "token_ids": ["6101"] }))
+        .deposit(NearToken::from_near(1))
+        .gas(Gas::from_tgas(300))
+        .transact()
+        .await?;
+    assert!(outcome.is_failure(), "a purchase went through while paused");
+    assert_eq!(ctx.owner_of("6101").await?, ctx.market.id().to_string());
+
+    // Cancelling: always open. This is the property that makes the pause a
+    // safety measure instead of a way to lock up other people's NFTs.
+    ctx.alice
+        .call(ctx.market.id(), "cancel_listing")
+        .args_json(serde_json::json!({ "token_id": "6101" }))
+        .deposit(NearToken::from_yoctonear(1))
+        .gas(Gas::from_tgas(100))
+        .transact()
+        .await?
+        .into_result()?;
+    assert_eq!(ctx.owner_of("6101").await?, ctx.alice.id().to_string());
+    assert_eq!(ctx.active_listings().await?, 0);
+
+    // Unpausing restores both paths.
+    ctx.market
+        .call("unpause")
+        .deposit(NearToken::from_yoctonear(1))
+        .gas(Gas::from_tgas(50))
+        .transact()
+        .await?
+        .into_result()?;
+    ctx.list("6101", NearToken::from_near(1)).await?;
+    ctx.bob
+        .call(ctx.market.id(), "buy_multiple")
+        .args_json(serde_json::json!({ "token_ids": ["6101"] }))
+        .deposit(NearToken::from_near(1))
+        .gas(Gas::from_tgas(300))
+        .transact()
+        .await?
+        .into_result()?;
+    assert_eq!(ctx.owner_of("6101").await?, ctx.bob.id().to_string());
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn only_the_owner_can_pause_the_marketplace() -> anyhow::Result<()> {
+    let ctx = common::setup().await?;
+
+    let outcome = ctx
+        .alice
+        .call(ctx.market.id(), "pause")
+        .deposit(NearToken::from_yoctonear(1))
+        .gas(Gas::from_tgas(50))
+        .transact()
+        .await?;
+    assert!(outcome.is_failure(), "a stranger paused the marketplace");
+    assert_eq!(
+        ctx.market
+            .view("is_paused")
+            .args_json(serde_json::json!({}))
+            .await?
+            .json::<bool>()?,
+        false
+    );
+
+    Ok(())
+}

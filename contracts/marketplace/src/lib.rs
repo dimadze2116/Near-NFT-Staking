@@ -91,6 +91,17 @@ enum StorageKey {
     Listings,
 }
 
+/// Pause flag, kept under its own storage key rather than as a field of the
+/// contract struct. Adding a field changes the borsh layout of the state, which
+/// means the new code cannot read the old bytes until a migration has run — on
+/// a contract holding other people's NFTs in escrow that is not a step worth
+/// taking for a boolean. A separate key needs no migration: its absence simply
+/// means "not paused", which is how the contract behaved before this existed.
+///
+/// The prefix is text so it cannot collide with the collection prefix produced
+/// by StorageKey's discriminant (0x00) or with "STATE".
+const K_PAUSED: &[u8] = b"flag:paused";
+
 // ─── Data Structures ────────────────────────────────────────────────────────────
 
 /// A listing. On listing, the NFT is transferred into the contract (escrow) -
@@ -166,6 +177,16 @@ impl MarketplaceContract {
             env::predecessor_account_id() == nft_contract,
             "nft_on_transfer: caller is not the authorized NFT contract"
         );
+
+        // Paused means no new listings. Returning true sends the NFT back;
+        // panicking here would strand it on the contract with no listing.
+        if env::storage_has_key(K_PAUSED) {
+            env::log_str(&format!(
+                "LISTING_REJECTED | reason=paused | nft={} | seller={}",
+                token_id, previous_owner_id
+            ));
+            return PromiseOrValue::Value(true);
+        }
 
         let price: u128 = match msg.trim().parse::<u128>() {
             Ok(p) if p > 0 && p <= MAX_LISTING_PRICE => p,
@@ -269,6 +290,12 @@ impl MarketplaceContract {
     /// as a separate transfer, independent of how the transfers turn out.
     #[payable]
     pub fn buy_multiple(&mut self, token_ids: Vec<String>) -> Promise {
+        // Panicking is right here, unlike in nft_on_transfer: nothing has been
+        // charged or moved yet, so the buyer simply keeps their deposit.
+        require!(
+            !env::storage_has_key(K_PAUSED),
+            "buy_multiple: the marketplace is paused"
+        );
         require!(!token_ids.is_empty(), "buy_multiple: token_ids must not be empty");
 
         // M-4: each item costs GAS_NFT_TRANSFER (25) + GAS_PURCHASE_CALLBACK (20) =
@@ -406,6 +433,30 @@ impl MarketplaceContract {
                     .with_static_gas(GAS_CALLBACK)
                     .on_withdraw_fees_complete(amount)
             )
+    }
+
+    // ── Pause ──────────────────────────────────────────────────────────────────
+
+    /// Closes the way in: no new listings, no purchases. Deliberately does not
+    /// touch cancel_listing — a seller must be able to take their NFT out of
+    /// escrow at any time. A pause that could trap other people's assets would
+    /// not be a safety measure.
+    #[payable]
+    pub fn pause(&mut self) {
+        self.assert_owner_one_yocto();
+        env::storage_write(K_PAUSED, &[1u8]);
+        env::log_str("PAUSED | listings and purchases refused, cancel unaffected");
+    }
+
+    #[payable]
+    pub fn unpause(&mut self) {
+        self.assert_owner_one_yocto();
+        env::storage_remove(K_PAUSED);
+        env::log_str("UNPAUSED");
+    }
+
+    pub fn is_paused(&self) -> bool {
+        env::storage_has_key(K_PAUSED)
     }
 
     // ── Callbacks (invoked only by the contract itself) ────────────────────
