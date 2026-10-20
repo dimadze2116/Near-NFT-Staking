@@ -54,7 +54,7 @@ already are.
 
 ## Verify it without owning an NFT
 
-Everything below is a read-only mainnet call. No wallet, no NFT, no sign-up.
+Seven read-only mainnet calls. No wallet, no NFT, no sign-up.
 Requires [near-cli-rs](https://github.com/near/near-cli-rs). Commands are written
 for a POSIX shell; in PowerShell the inner quotes need escaping
 (`json-args '{\"position\": 1}'`).
@@ -103,7 +103,7 @@ near contract call-function as-read-only legion-staking.near preview_reward \
   network-config mainnet now
 ```
 
-**See:** exactly `46410958904109589041095` — that is 0.046411 NEAR.
+**See:** exactly `"46410958904109589041095"` — that is 0.046411 NEAR.
 
 Verify it yourself: the contract values one NFT at 10 NEAR
 (`NFT_VALUE_YOCTO`), so
@@ -117,7 +117,7 @@ returns `198904109589041095890410` (0.198904 NEAR).
 
 ```bash
 near contract call-function as-read-only legion-marketplace.near get_listings \
-  json-args '{"from_index": 0, "limit": 10}' network-config mainnet now
+  json-args '{"from_index": 0, "limit": 50}' network-config mainnet now
 ```
 
 **See:** an array of `{token_id, seller, price, listed_at}`. Each `token_id` in
@@ -138,9 +138,16 @@ near contract call-function as-read-only legion-marketplace.near get_marketplace
   json-args '{}' network-config mainnet now
 ```
 
-**See:** `active_listings` matching the length of the list above, and
-`fees_collected` — fees accumulated from completed sales, in yoctoNEAR.
-`get_fee_bps` returns `50`, i.e. 0.5%.
+**See:** `active_listings` — the number of listings currently in escrow, which
+is the count the call in step 4 pages through — and `fees_collected`, the fees
+accumulated from completed sales in yoctoNEAR. `get_fee_bps` returns `"50"`,
+i.e. 0.5%.
+
+`fees_collected` is a running total that *decreases* when fees are withdrawn, so
+it is a treasury balance, not historical volume. Worth knowing before reading
+anything into it. At 50 bps, the `19000000000000000000000` standing there at the
+time of writing accounts for at least 3.8 NEAR of completed sales — a floor, for
+that same reason, not a total.
 
 ### 6. The deployed code is the code in this repository
 
@@ -154,10 +161,33 @@ near contract call-function as-read-only legion-staking.near admin_return_nft \
   json-args '{"stake_id": "anything"}' network-config mainnet now
 ```
 
-**See:** `attach exactly 1 yoctoNEAR`. The method resolved and then refused on
-its access check, which means the deployed build contains this repository's
-`admin_return_nft`. A build without it answers
-`MethodResolveError(MethodNotFound)`.
+**See:** the call *fails*, and that failure is the proof. The error carries
+`HostError(GuestPanic { panic_msg: "attach exactly 1 yoctoNEAR" })` — the method
+resolved, ran, and refused on its access check, which means the deployed build
+contains this repository's `admin_return_nft`. A build without it would answer
+`MethodResolveError(MethodNotFound)` instead, which is a different error from a
+different stage.
+
+### 7. People have actually used it
+
+```bash
+near contract call-function as-read-only legion-staking.near get_claimed_stakes_count \
+  json-args '{}' network-config mainnet now
+
+near contract call-function as-read-only legion-staking.near get_unique_claimers_count \
+  json-args '{}' network-config mainnet now
+```
+
+**See:** `"73"` and `"23"` at the time of writing — 73 completed staking cycles
+across 23 distinct accounts, so roughly three cycles per account: people came
+back. A cycle counts only after a successful `unstake` whose NFT transfer *and*
+reward payment both resolved, which is why these two numbers are the hardest
+thing in this README to fake. Both only ever grow, so larger values mean more
+cycles since.
+
+`get_claimed_stake_ids` lists the keys behind that count, and
+`get_claimed_stakes` pages through them with amounts and dates, if you want to
+look at individual cycles rather than the total.
 
 ---
 
