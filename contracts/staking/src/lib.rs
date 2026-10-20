@@ -97,6 +97,76 @@ enum StorageKey {
     StakesByAccountInner { account_hash: Vec<u8> },
 }
 
+// ─── Counters and the pause flag, kept outside the contract struct ───────────
+//
+// F-3: creating a stake used to scan the whole stake map twice — once for the
+// global MAX_ACTIVE_STAKES ceiling and once for the staker's own position. That
+// is in the write path, so the cost of staking grew with the number of records
+// ever created.
+//
+// The counters that replace those scans live under their own storage keys
+// rather than as fields of the contract struct, and that is the whole point:
+// adding a field changes the borsh layout of the state, which means the new
+// code cannot read the old bytes and a migration has to run before anything
+// works again. On a contract holding other people's NFTs that is the single
+// most dangerous operation available. Separate keys need no migration, and the
+// read path falls back to scanning while they are absent, so a deployment
+// behaves exactly as the previous build until someone calls init_counters —
+// and reset_counters puts it back.
+//
+// Keys are text on purpose. The collections occupy the prefixes produced by
+// StorageKey's discriminants (0x00, 0x01, 0x02) and the struct itself sits
+// under "STATE"; a key beginning with 'c' or 'f' cannot collide with any of
+// them on the first byte.
+const K_READY:   &[u8] = b"ctr:ready";    // present ⇒ counters are authoritative
+const K_ACTIVE:  &[u8] = b"ctr:active";   // u64: active stakes, contract-wide
+const K_CLAIMED: &[u8] = b"ctr:claimed";  // u64: claimed records, contract-wide
+const K_PAUSED:  &[u8] = b"flag:paused";  // present ⇒ new stakes are refused
+
+fn ctr_key_for(account: &AccountId) -> Vec<u8> {
+    [b"ctr:acc:".as_slice(), account.as_bytes()].concat()
+}
+
+/// One flag for the whole set. Without it, a missing per-account key would be
+/// ambiguous: zero active stakes, or counters never computed?
+fn counters_ready() -> bool {
+    env::storage_has_key(K_READY)
+}
+
+fn read_counter(key: &[u8]) -> u64 {
+    env::storage_read(key)
+        .and_then(|bytes| <[u8; 8]>::try_from(bytes.as_slice()).ok())
+        .map(u64::from_le_bytes)
+        .unwrap_or(0)
+}
+
+fn write_counter(key: &[u8], value: u64) {
+    env::storage_write(key, &value.to_le_bytes());
+}
+
+fn bump_counter(key: &[u8], delta: i64) {
+    let current = read_counter(key);
+    let next = if delta >= 0 {
+        current.saturating_add(delta as u64)
+    } else {
+        current.saturating_sub(delta.unsigned_abs())
+    };
+    write_counter(key, next);
+}
+
+/// Result of comparing the counters against a full scan. Exists because a
+/// counter that drifts does not announce itself: the contract keeps working
+/// until active_stakes reaches MAX_ACTIVE_STAKES with room actually to spare,
+/// and then refuses stakes for no visible reason.
+#[near(serializers = [json])]
+pub struct CounterAudit {
+    pub ready:           bool,
+    pub active_counter:  U128,
+    pub active_real:     U128,
+    pub claimed_counter: U128,
+    pub claimed_real:    U128,
+}
+
 // ─── Data Structures ──────────────────────────────────────────────────────────
 
 #[near(serializers = [borsh, json])]
@@ -244,6 +314,7 @@ impl NftStakingContract {
         let mut updated = stake.clone();
         updated.claimed = true;
         self.stakes.insert(stake_id.clone(), updated);
+        self.count_stake_claimed(&stake.owner);
 
         // The reserve returns to the pool: the owner never came for the reward.
         self.reward_pool += stake.reward_near.0;
@@ -334,8 +405,81 @@ impl NftStakingContract {
             }
         }
 
+        if counters_ready() {
+            bump_counter(K_CLAIMED, -(count as i64));
+        }
+
         env::log_str(&format!("PRUNE | removed {} claimed stakes", count));
         count
+    }
+
+    /// Computes the counters from scratch and marks them authoritative.
+    /// Idempotent: calling it again recomputes everything, so activity between
+    /// deployment and this call cannot throw the numbers off.
+    #[payable]
+    pub fn init_counters(&mut self) -> CounterAudit {
+        self.assert_owner_one_yocto();
+
+        let mut active  = 0u64;
+        let mut claimed = 0u64;
+        let mut per_account: std::collections::HashMap<AccountId, u64> =
+            std::collections::HashMap::new();
+
+        for (_, s) in self.stakes.iter() {
+            if s.claimed {
+                claimed += 1;
+            } else {
+                active += 1;
+                *per_account.entry(s.owner.clone()).or_insert(0) += 1;
+            }
+        }
+
+        write_counter(K_ACTIVE, active);
+        write_counter(K_CLAIMED, claimed);
+        for (account, n) in per_account {
+            write_counter(&ctr_key_for(&account), n);
+        }
+        env::storage_write(K_READY, &[1u8]);
+
+        env::log_str(&format!(
+            "COUNTERS_INIT | active={} | claimed={}",
+            active, claimed
+        ));
+
+        self.audit_counters()
+    }
+
+    /// Removes every counter key. Afterwards the contract reads by scanning,
+    /// exactly as it did before the counters existed — this is the way back if
+    /// anything about them looks wrong.
+    #[payable]
+    pub fn reset_counters(&mut self) {
+        self.assert_owner_one_yocto();
+
+        let owners: std::collections::HashSet<AccountId> =
+            self.stakes.iter().map(|(_, s)| s.owner.clone()).collect();
+        for account in owners {
+            env::storage_remove(&ctr_key_for(&account));
+        }
+        env::storage_remove(K_ACTIVE);
+        env::storage_remove(K_CLAIMED);
+        env::storage_remove(K_READY);
+
+        env::log_str("COUNTERS_RESET | reads fall back to scanning");
+    }
+
+    #[payable]
+    pub fn pause(&mut self) {
+        self.assert_owner_one_yocto();
+        env::storage_write(K_PAUSED, &[1u8]);
+        env::log_str("PAUSED | new stakes refused, unstake unaffected");
+    }
+
+    #[payable]
+    pub fn unpause(&mut self) {
+        self.assert_owner_one_yocto();
+        env::storage_remove(K_PAUSED);
+        env::log_str("UNPAUSED");
     }
 
     // ── NFT Receiver ───────────────────────────────────────────────────────
@@ -361,6 +505,16 @@ impl NftStakingContract {
             env::predecessor_account_id() == nft_contract,
             "nft_on_transfer: caller is not the authorized NFT contract"
         );
+
+        // Paused means no new positions. Returning true sends the NFT back;
+        // panicking here would leave it on the contract with no record of it.
+        if env::storage_has_key(K_PAUSED) {
+            env::log_str(&format!(
+                "STAKE_REJECTED | reason=paused | nft={} | owner={}",
+                token_id, owner_id
+            ));
+            return PromiseOrValue::Value(true);
+        }
 
         let period_days: u8 = match msg.trim().parse::<u8>() {
             Ok(d) if d == 7 || d == 14 || d == 30 => d,
@@ -393,7 +547,7 @@ impl NftStakingContract {
 
         // Ceiling on active NFTs across the whole contract - this is what guarantees the
         // pool budget mathematically, however the periods and stakers happen to spread.
-        let total_active = self.stakes.iter().filter(|(_, s)| !s.claimed).count() as u64;
+        let total_active = self.active_total();
         if total_active >= MAX_ACTIVE_STAKES {
             env::log_str(&format!(
                 "STAKE_REJECTED | reason=pool_full | active={} | max={} | nft={} | owner={}",
@@ -402,7 +556,7 @@ impl NftStakingContract {
             return PromiseOrValue::Value(true);
         }
 
-        let active_count = self.active_stake_count(&owner_id);
+        let active_count = self.active_for(&owner_id);
         let reward = self.calc_reward(period_days, active_count + 1);
 
         if self.reward_pool < reward {
@@ -440,6 +594,8 @@ impl NftStakingContract {
             .get_mut(&owner_id)
             .unwrap()
             .insert(stake_id);
+
+        self.count_stake_created(&owner_id);
 
         env::log_str(&format!(
             "STAKE_CREATED | nft={} | owner={} | period_days={} | reward={} yN | unlocks_at={}",
@@ -490,6 +646,7 @@ impl NftStakingContract {
         let mut updated = stake.clone();
         updated.claimed = true;
         self.stakes.insert(stake_id.clone(), updated);
+        self.count_stake_claimed(&caller);
 
         let reward       = stake.reward_near;
         let nft_contract: AccountId = NFT_CONTRACT_ID.parse().unwrap();
@@ -564,6 +721,7 @@ impl NftStakingContract {
             if let Some(mut stake) = self.stakes.get(&stake_id).cloned() {
                 stake.claimed = false;
                 self.stakes.insert(stake_id, stake);
+                self.count_claim_rolled_back(&caller);
             }
             // Return the reward to the pool
             self.reward_pool += reward.0;
@@ -590,6 +748,7 @@ impl NftStakingContract {
             self.reward_pool -= stake.reward_near.0;
             let restored = stake.clone();
             self.stakes.insert(stake_id, restored);
+            self.count_claim_rolled_back(&stake.owner);
             env::log_str(&format!(
                 "ADMIN_RETURN_FAILED | nft={} | owner={} — stake restored",
                 stake.token_id, stake.owner
@@ -672,7 +831,32 @@ impl NftStakingContract {
     }
 
     pub fn get_active_stakes_count(&self) -> U128 {
-        U128(self.stakes.iter().filter(|(_, s)| !s.claimed).count() as u128)
+        U128(self.active_total() as u128)
+    }
+
+    pub fn is_paused(&self) -> bool {
+        env::storage_has_key(K_PAUSED)
+    }
+
+    /// Counters against a full scan. Pays for the scan, so it is meant to be
+    /// called by hand when something looks off, not on every read.
+    pub fn audit_counters(&self) -> CounterAudit {
+        let mut active_real  = 0u128;
+        let mut claimed_real = 0u128;
+        for (_, s) in self.stakes.iter() {
+            if s.claimed {
+                claimed_real += 1;
+            } else {
+                active_real += 1;
+            }
+        }
+        CounterAudit {
+            ready:           counters_ready(),
+            active_counter:  U128(read_counter(K_ACTIVE) as u128),
+            active_real:     U128(active_real),
+            claimed_counter: U128(read_counter(K_CLAIMED) as u128),
+            claimed_real:    U128(claimed_real),
+        }
     }
 
     pub fn get_matured_stakes_count(&self) -> U128 {
@@ -683,7 +867,7 @@ impl NftStakingContract {
     }
 
     pub fn get_total_staked(&self) -> U128 {
-        U128(self.stakes.iter().filter(|(_, s)| !s.claimed).count() as u128)
+        U128(self.active_total() as u128)
     }
 
     pub fn get_contract_stats(&self) -> ContractStats {
@@ -911,6 +1095,52 @@ impl NftStakingContract {
             14 => PERIOD_14_DAYS,
             30 => PERIOD_30_DAYS,
             _  => 0,
+        }
+    }
+
+    /// Active stakes contract-wide. Reads the counter when it is authoritative,
+    /// otherwise scans, which is what the contract did before F-3 was fixed.
+    fn active_total(&self) -> u64 {
+        if counters_ready() {
+            read_counter(K_ACTIVE)
+        } else {
+            self.stakes.iter().filter(|(_, s)| !s.claimed).count() as u64
+        }
+    }
+
+    /// Active stakes of one account, same fallback.
+    fn active_for(&self, account_id: &AccountId) -> u32 {
+        if counters_ready() {
+            read_counter(&ctr_key_for(account_id)) as u32
+        } else {
+            self.active_stake_count(account_id)
+        }
+    }
+
+    /// The three hooks below are the whole maintenance burden the counters
+    /// bring, and the rollback one is the dangerous member of the set: it runs
+    /// in a callback after a failed transfer, and forgetting it there is how a
+    /// counter silently starts to lie. audit_counters exists to catch that.
+    fn count_stake_created(&self, owner: &AccountId) {
+        if counters_ready() {
+            bump_counter(K_ACTIVE, 1);
+            bump_counter(&ctr_key_for(owner), 1);
+        }
+    }
+
+    fn count_stake_claimed(&self, owner: &AccountId) {
+        if counters_ready() {
+            bump_counter(K_ACTIVE, -1);
+            bump_counter(K_CLAIMED, 1);
+            bump_counter(&ctr_key_for(owner), -1);
+        }
+    }
+
+    fn count_claim_rolled_back(&self, owner: &AccountId) {
+        if counters_ready() {
+            bump_counter(K_ACTIVE, 1);
+            bump_counter(K_CLAIMED, -1);
+            bump_counter(&ctr_key_for(owner), 1);
         }
     }
 
