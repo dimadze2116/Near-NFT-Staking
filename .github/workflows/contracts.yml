@@ -18,9 +18,15 @@ on:
       - '.github/workflows/contracts.yml'
   workflow_dispatch:
 
+env:
+  # Pinned deliberately: a new cargo-near release should not change what this
+  # workflow builds without someone deciding to.
+  CARGO_NEAR_VERSION: 0.22.0
+
 jobs:
   integration-tests:
-    runs-on: ubuntu-latest
+    # Pinned rather than ubuntu-latest, which is mid-migration to Ubuntu 26.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
 
     steps:
@@ -39,10 +45,17 @@ jobs:
 
       # Only cargo-near produces a working binary: since near-sdk 5.27 the
       # --cfg near flag is required, and a plain cargo build compiles, deploys,
-      # and then traps at new().
+      # and then traps at new(). The prebuilt release binary is used instead of
+      # `cargo install`, which has to compile cargo-near and its whole tree.
       - name: Install cargo-near
         run: |
-          command -v cargo-near >/dev/null || cargo install cargo-near --locked
+          set -euo pipefail
+          url="https://github.com/near/cargo-near/releases/download/cargo-near-v${CARGO_NEAR_VERSION}/cargo-near-x86_64-unknown-linux-gnu.tar.gz"
+          curl -fsSL "$url" -o /tmp/cargo-near.tar.gz
+          mkdir -p /tmp/cargo-near && tar -xzf /tmp/cargo-near.tar.gz -C /tmp/cargo-near
+          bin="$(find /tmp/cargo-near -type f -name cargo-near -perm -u+x | head -n1)"
+          test -n "$bin" || { echo "cargo-near binary not found in archive:"; find /tmp/cargo-near -type f; exit 1; }
+          install -m 0755 "$bin" "$HOME/.cargo/bin/cargo-near"
           cargo near --version
 
       - name: Build mock collection
