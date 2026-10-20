@@ -190,34 +190,47 @@ impl Ctx {
         let owner = self.alice.id().to_string();
         let state = self.staking.view_state().await?;
 
-        for (key, value) in state {
-            let Some(offset) = staked_at_offset(&value, &owner, token_id) else {
-                continue;
-            };
-            let mut patched = value.clone();
-            let current = u64::from_le_bytes(value[offset..offset + 8].try_into()?);
-            let moved = current.saturating_sub(seconds);
-            patched[offset..offset + 8].copy_from_slice(&moved.to_le_bytes());
-            self.worker
-                .patch_state(self.staking.id(), &key, &patched)
-                .await?;
-            return Ok(());
+        let mut seen: Vec<String> = Vec::new();
+        for (key, value) in &state {
+            match staked_at_offset(value, &owner, token_id) {
+                Some(offset) => {
+                    let mut patched = value.clone();
+                    let current = u64::from_le_bytes(value[offset..offset + 8].try_into()?);
+                    let moved = current.saturating_sub(seconds);
+                    patched[offset..offset + 8].copy_from_slice(&moved.to_le_bytes());
+                    self.worker
+                        .patch_state(self.staking.id(), key, &patched)
+                        .await?;
+                    return Ok(());
+                }
+                None => seen.push(describe_entry(key, value)),
+            }
         }
-        anyhow::bail!("no stake record found for {owner}:{token_id} in contract state")
+        anyhow::bail!(
+            "no stake record for {owner}:{token_id} among {} state entries\n{}",
+            state.len(),
+            seen.join("\n")
+        )
     }
 }
 
-/// See `backdate_stake` for the layout this walks.
+/// Offset of `staked_at` inside a borsh-encoded StakeInfo, or None if this
+/// state entry is something else.
+///
+/// Layout:
+///   owner       u32 little-endian length + utf8
+///   token_id    u32 little-endian length + utf8
+///   staked_at   u64 little-endian      <- what gets rewritten
+///   period_days u8
+///   reward_near u128 little-endian
+///   claimed     u8
+///
+/// Anything after that is left alone and not assumed: near-sdk's IterableMap
+/// stores a value together with bookkeeping of its own, and the exact shape of
+/// that tail is an implementation detail. Identification rests on owner and
+/// token_id matching and on period_days being one of the three the contract
+/// accepts, which no other record in this contract's state satisfies.
 fn staked_at_offset(value: &[u8], owner: &str, token_id: &str) -> Option<usize> {
-    fn read_str(v: &[u8], at: usize) -> Option<(String, usize)> {
-        let len = u32::from_le_bytes(v.get(at..at + 4)?.try_into().ok()?) as usize;
-        if len > 128 {
-            return None;
-        }
-        let bytes = v.get(at + 4..at + 4 + len)?;
-        Some((String::from_utf8(bytes.to_vec()).ok()?, at + 4 + len))
-    }
-
     let (found_owner, next) = read_str(value, 0)?;
     if found_owner != owner {
         return None;
@@ -227,8 +240,37 @@ fn staked_at_offset(value: &[u8], owner: &str, token_id: &str) -> Option<usize> 
         return None;
     }
     // staked_at(8) + period_days(1) + reward_near(16) + claimed(1)
-    if staked_at + 26 != value.len() {
+    if value.len() < staked_at + 26 {
         return None;
     }
-    Some(staked_at)
+    match value.get(staked_at + 8) {
+        Some(7) | Some(14) | Some(30) => Some(staked_at),
+        _ => None,
+    }
+}
+
+fn read_str(v: &[u8], at: usize) -> Option<(String, usize)> {
+    let len = u32::from_le_bytes(v.get(at..at + 4)?.try_into().ok()?) as usize;
+    if len == 0 || len > 128 {
+        return None;
+    }
+    let bytes = v.get(at + 4..at + 4 + len)?;
+    Some((String::from_utf8(bytes.to_vec()).ok()?, at + 4 + len))
+}
+
+/// Printed only when the lookup fails, so one failing run is enough to see the
+/// real layout instead of guessing at it again.
+fn describe_entry(key: &[u8], value: &[u8]) -> String {
+    let key_hex: String = key.iter().take(12).map(|b| format!("{b:02x}")).collect();
+    let strings = match read_str(value, 0) {
+        Some((first, next)) => match read_str(value, next) {
+            Some((second, after)) => format!(
+                "str1={first:?} str2={second:?} next_byte={:?}",
+                value.get(after + 8)
+            ),
+            None => format!("str1={first:?}"),
+        },
+        None => "no leading string".to_string(),
+    };
+    format!("  key={key_hex} len={} {strings}", value.len())
 }
