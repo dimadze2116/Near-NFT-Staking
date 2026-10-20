@@ -69,11 +69,17 @@ async fn stake_matures_then_unstake_returns_nft_and_reward() -> anyhow::Result<(
         "the NFT should be back with its owner"
     );
 
+    // The contract's balance drops by the reward, give or take gas: it pays the
+    // reward out and gets unused gas from its own promises refunded back, which
+    // is worth a fraction of a thousandth of a NEAR. Hence a tolerance rather
+    // than an exact figure — and a tolerance three orders of magnitude below
+    // the reward, so it cannot hide a missing payout.
     let contract_after = ctx.staking_balance().await?;
+    let moved = contract_before - contract_after;
+    let tolerance = NearToken::from_millinear(1).as_yoctonear();
     assert!(
-        contract_before - contract_after >= reward,
-        "the contract did not part with the reward: before={contract_before} \
-         after={contract_after} reward={reward}"
+        moved.abs_diff(reward) < tolerance,
+        "the contract's balance moved by {moved}, expected about {reward}"
     );
 
     // The reward was taken out of the pool when the stake was created, so
