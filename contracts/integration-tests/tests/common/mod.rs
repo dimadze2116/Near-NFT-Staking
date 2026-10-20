@@ -1,3 +1,8 @@
+// Each test binary compiles this module in full, so helpers used by only some
+// of them read as dead code in the others. That is how a shared `common` module
+// always behaves with Cargo's integration tests.
+#![allow(dead_code)]
+
 //! Shared sandbox setup for the staking integration tests.
 //!
 //! Two things here are not obvious and are the reason this file exists.
@@ -24,10 +29,8 @@ const STAKING_WASM: &str = "../staking/target/near/nft_staking.wasm";
 const MOCK_NFT_WASM: &str = "../mock-nft/target/near/mock_nft.wasm";
 
 pub struct Ctx {
-    /// Kept for tests that need to rewrite state directly — patching
-    /// `staked_at` is how a matured stake is produced without waiting out
-    /// 604,800 blocks.
-    #[allow(dead_code)]
+    /// Used by tests that rewrite state directly — patching `staked_at` is how
+    /// a matured stake is produced without waiting out 604,800 blocks.
     pub worker: Worker<Sandbox>,
     /// The collection, deployed at nearlegion.nfts.tg
     pub nft: Contract,
@@ -140,4 +143,92 @@ impl Ctx {
             .unwrap_or("<none>")
             .to_string())
     }
+
+    /// Stakes `token_id` for `period_days` through nft_transfer_call, the way
+    /// the Mini App does it.
+    pub async fn stake(&self, token_id: &str, period_days: u8) -> anyhow::Result<()> {
+        self.alice
+            .call(self.nft.id(), "nft_transfer_call")
+            .args_json(serde_json::json!({
+                "receiver_id": self.staking.id(),
+                "token_id": token_id,
+                "msg": period_days.to_string(),
+            }))
+            .deposit(NearToken::from_yoctonear(1))
+            .gas(near_workspaces::types::Gas::from_tgas(300))
+            .transact()
+            .await?
+            .into_result()?;
+        Ok(())
+    }
+
+    pub async fn alice_balance(&self) -> anyhow::Result<u128> {
+        Ok(self.alice.view_account().await?.balance.as_yoctonear())
+    }
+
+    /// Moves a stake's `staked_at` back by `seconds`, which is how a matured
+    /// position is produced in a test.
+    ///
+    /// Waiting is not an option: the shortest period is 7 days, about 604,800
+    /// blocks, and `fast_forward` costs roughly five seconds per epoch crossed.
+    /// So the record is rewritten directly through the sandbox's patch_state.
+    ///
+    /// The record is found by its contents rather than by computing its storage
+    /// key, which keeps this independent of how near-sdk lays out collection
+    /// prefixes. StakeInfo is borsh-encoded as:
+    ///
+    ///   owner       u32 little-endian length + utf8
+    ///   token_id    u32 little-endian length + utf8
+    ///   staked_at   u64 little-endian      <- the field being rewritten
+    ///   period_days u8
+    ///   reward_near u128 little-endian
+    ///   claimed     u8
+    ///
+    /// Matching owner and token_id *and* requiring the value to end exactly
+    /// where that layout says it should makes the identification unambiguous.
+    pub async fn backdate_stake(&self, token_id: &str, seconds: u64) -> anyhow::Result<()> {
+        let owner = self.alice.id().to_string();
+        let state = self.staking.view_state().await?;
+
+        for (key, value) in state {
+            let Some(offset) = staked_at_offset(&value, &owner, token_id) else {
+                continue;
+            };
+            let mut patched = value.clone();
+            let current = u64::from_le_bytes(value[offset..offset + 8].try_into()?);
+            let moved = current.saturating_sub(seconds);
+            patched[offset..offset + 8].copy_from_slice(&moved.to_le_bytes());
+            self.worker
+                .patch_state(self.staking.id(), &key, &patched)
+                .await?;
+            return Ok(());
+        }
+        anyhow::bail!("no stake record found for {owner}:{token_id} in contract state")
+    }
+}
+
+/// See `backdate_stake` for the layout this walks.
+fn staked_at_offset(value: &[u8], owner: &str, token_id: &str) -> Option<usize> {
+    fn read_str(v: &[u8], at: usize) -> Option<(String, usize)> {
+        let len = u32::from_le_bytes(v.get(at..at + 4)?.try_into().ok()?) as usize;
+        if len > 128 {
+            return None;
+        }
+        let bytes = v.get(at + 4..at + 4 + len)?;
+        Some((String::from_utf8(bytes.to_vec()).ok()?, at + 4 + len))
+    }
+
+    let (found_owner, next) = read_str(value, 0)?;
+    if found_owner != owner {
+        return None;
+    }
+    let (found_token, staked_at) = read_str(value, next)?;
+    if found_token != token_id {
+        return None;
+    }
+    // staked_at(8) + period_days(1) + reward_near(16) + claimed(1)
+    if staked_at + 26 != value.len() {
+        return None;
+    }
+    Some(staked_at)
 }
