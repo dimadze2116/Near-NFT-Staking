@@ -43,6 +43,67 @@ pub fn nft_on_transfer(&mut self, #[allow(unused_variables)] sender_id: AccountI
 
 **View methods panicked on malformed data.** A record with a non-standard period would take down contract-wide statistics for every user — and, worse, the same call sat in `unstake`, meaning the owner of such a record could not retrieve their own NFT. Reads and `unstake` now degrade gracefully.
 
+## The last finding, and how it was closed without a migration
+
+One finding stayed open longer than the rest: creating a stake scanned the whole
+stake map twice — once against the contract-wide `MAX_ACTIVE_STAKES` ceiling and
+once for the staker's own tier position. Both are in the write path, so the cost
+of staking grew with every record ever created. Nothing could be stolen through
+it; what it threatened was liveness. At some size, staking would simply stop
+being affordable and new positions would be refused for no visible reason.
+
+The obvious fix — counters as fields of the contract struct — carries a cost of
+its own. Adding a field changes the borsh layout of the state, so the new code
+cannot read the old bytes until a migration has run. On a contract holding other
+people's NFTs that is the most dangerous operation available: it is all-or-
+nothing, and there is no intermediate state to stop and think in.
+
+**Status:** this is in the tree and not yet on mainnet. The deployment is one
+of the things scheduled for the hackathon window, and the order it follows is in
+[`DEPLOYMENT.md`](DEPLOYMENT.md).
+
+The counters therefore live under their own storage keys instead:
+
+- While the keys are absent the contract **scans, exactly as before**. A
+  deployment changes nothing observable — `tests/parity.rs` deploys the previous
+  mainnet bytecode beside the new build and requires 35 answers to match, with
+  the counters left uninitialised, which is precisely the state a redeploy
+  lands in.
+- `init_counters` computes them from existing state, including positions created
+  before they existed.
+- `reset_counters` deletes them and the contract is back to scanning.
+- `audit_counters` compares the counters against a full scan, because a counter
+  that drifts does not announce itself — the contract keeps working until
+  `active_stakes` reaches the ceiling with room actually to spare.
+
+Five write paths maintain them. The one that matters is the rollback inside the
+callback of a failed NFT transfer: it is the only place where a counter can
+quietly diverge from reality, and it has a test of its own.
+
+The keys are text (`ctr:`, `flag:`) so they cannot collide on the first byte
+with the collection prefixes the SDK derives from `StorageKey` discriminants
+(`0x00`, `0x01`, `0x02`) or with `STATE`.
+
+The same approach gives both contracts a pause. It blocks the way in — new
+stakes, new listings, purchases — and never the way out: `unstake` and
+`cancel_listing` are not pausable at all. A pause that could trap someone
+else's NFT in escrow would not be a safety measure.
+
+## Tests
+
+There were none when the review was done, which is worth stating plainly: every
+fix above was verified by reading and by trying it on mainnet. There are now
+18 integration tests, run on every push (see the badge in the README).
+They cover the findings most likely to regress — duplicate cart entries, the
+refund on a failed transfer, the solvency guard — along with the full staking
+cycle, the cart ceiling, both pauses and the counters.
+
+`contracts/integration-tests/` is a package of its own, with no near-sdk
+dependency: the tests talk to the contracts over RPC against a sandbox node and
+load the compiled `.wasm` from disk. Nothing test-only can reach the crate that
+produces the deployed binary — which is what makes the parity test mean
+anything.
+
 ## Design decisions
 
 ### No private keys on the server

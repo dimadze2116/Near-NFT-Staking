@@ -39,6 +39,55 @@ near contract call-function as-read-only legion-staking.near admin_return_nft \
 
 The new build answers `attach exactly 1 yoctoNEAR` — the method resolved and failed its access check. An old build answers `MethodResolveError(MethodNotFound)`.
 
+## Turning the counters on, and off
+
+The staking contract keeps its counters under separate storage keys rather than
+as struct fields, so a redeploy needs no migration and `without-init-call`
+remains correct. The order matters, and each step is checkable before the next:
+
+```bash
+# 1. Ordinary redeploy. Nothing observable changes yet.
+near contract deploy legion-staking.near use-file target/near/nft_staking.wasm \
+  without-init-call network-config mainnet sign-with-keychain send
+
+# 2. Confirm the new code is in and still scanning: ready must be false,
+#    and the *_counter fields are meaningless while it is.
+near contract call-function as-read-only legion-staking.near audit_counters \
+  json-args '{}' network-config mainnet now
+
+# 3. Compute the counters from existing state.
+near contract call-function as-transaction legion-staking.near init_counters \
+  json-args '{}' prepaid-gas '150 Tgas' attached-deposit '1 yoctoNEAR' \
+  sign-as legion-staking.near network-config mainnet sign-with-keychain send
+
+# 4. Confirm they agree with a full scan: active_counter == active_real and
+#    claimed_counter == claimed_real.
+near contract call-function as-read-only legion-staking.near audit_counters \
+  json-args '{}' network-config mainnet now
+```
+
+If step 4 disagrees, or anything else looks wrong, `reset_counters` deletes the
+keys and the contract goes back to scanning — the same behaviour as step 2. That
+is the whole reason the counters are not struct fields: the way back is one
+call, not a second migration.
+
+`audit_counters` pays for a full scan, so it is for moments like these rather
+than for routine monitoring.
+
+## Pausing
+
+Both contracts can be paused, and both refuse only the way in:
+
+```bash
+near contract call-function as-transaction legion-staking.near pause \
+  json-args '{}' prepaid-gas '30 Tgas' attached-deposit '1 yoctoNEAR' \
+  sign-as legion-staking.near network-config mainnet sign-with-keychain send
+```
+
+`unstake` and `cancel_listing` keep working while paused. That is deliberate and
+tested: a pause that could hold someone else's NFT would be a hazard rather
+than a safeguard.
+
 ## Hosting the backend
 
 The bot needs to be always-on: it receives Telegram webhooks and runs cron at fixed times. A host that sleeps idle containers will silently skip scheduled notifications, since a sleeping process runs no timers and missed cron firings are not replayed.

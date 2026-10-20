@@ -65,6 +65,20 @@ Amounts are `U128` and therefore serialise as JSON **strings**, not numbers —
 that is deliberate, not a bug: yoctoNEAR values exceed what IEEE-754 doubles can
 represent exactly.
 
+All seven in one paste, if you would rather read the answers than type the calls.
+Each line stands on its own; the sections below explain what to expect from each.
+
+```bash
+N="network-config mainnet now"
+near contract call-function as-read-only legion-staking.near get_contract_stats json-args '{}' $N
+near contract call-function as-read-only legion-staking.near get_apr_bps json-args '{"position": 1}' $N
+near contract call-function as-read-only legion-staking.near preview_reward json-args '{"period_days": 7, "current_active_count": 0, "add_count": 1}' $N
+near contract call-function as-read-only legion-staking.near get_claimed_stakes_count json-args '{}' $N
+near contract call-function as-read-only legion-staking.near get_unique_claimers_count json-args '{}' $N
+near contract call-function as-read-only legion-marketplace.near get_marketplace_stats json-args '{}' $N
+near contract call-function as-read-only legion-marketplace.near get_fee_bps json-args '{}' $N
+```
+
 ### 1. The contract is live and holds real positions
 
 ```bash
@@ -305,7 +319,8 @@ state-changing administrative operation is performed manually through
 yoctoNEAR, and a human signs it. `bot/src/near.ts` is read-only by
 construction — the key-handling code was deleted rather than guarded.
 
-**Internal review: 15 findings, 14 fixed and redeployed.** The most serious one:
+**Internal review: 15 findings, 14 fixed and live; the fifteenth is fixed in
+this tree and goes to mainnet during the hackathon window.** The most serious one:
 `nft_on_transfer` derived stake ownership from `sender_id`, which under NEP-171
 differs from the owner whenever a NEP-178 approval is used — an approved account
 could stake someone else's NFT and claim it as its own. Ownership now comes from
@@ -330,10 +345,10 @@ receives the NFT.
   signing rather than after.
 - **`MAX_ACTIVE_STAKES = 300`** globally, which keeps the reward budget provably
   bounded.
-- **One review finding is still open** (F-3, iteration over collections inside
-  view methods). The fix needs counters in state, which means a state migration,
-  so it is deferred rather than bundled into a routine redeploy.
-- **No `pause`/`unpause` and no owner transfer** yet — same migration.
+- **No owner transfer yet.** The field is reserved in state, so adding the
+  methods later needs no migration, but the mechanism is not there. It is also
+  not obviously wanted: the owner is the contract account itself, and pointing
+  it at a personal account would widen what a compromise of that account costs.
 - **No formal third-party audit.** At current volumes that would be premature;
   it is the natural next step as the project scales.
 
