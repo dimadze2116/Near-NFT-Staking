@@ -77,7 +77,9 @@ jobs:
         working-directory: contracts/integration-tests
         run: |
           set -o pipefail
-          cargo test -- --nocapture 2>&1 | tee /tmp/test-output.txt
+          # --no-fail-fast so one failing binary does not hide the others:
+          # each round trip through CI is expensive enough to want every result.
+          cargo test --no-fail-fast -- --nocapture 2>&1 | tee /tmp/test-output.txt
 
       # Run logs are only served through signed storage URLs, which is awkward
       # to read from anywhere but a browser. On failure the tail of the output
