@@ -210,17 +210,16 @@ export function nearToYocto(amountNear: string): string {
 }
 
 /*
- * DELIBERATELY REMOVED: callContract / depositRewards / withdrawRewards.
+ * DELIBERATELY ABSENT: callContract / depositRewards / withdrawRewards.
  *
- * These functions signed transactions with the key from ADMIN_NEAR_PRIVATE_KEY. The
- * owner of both contracts is the contract account itself, and legion-staking.near
- * has exactly one key, which is full-access. So that environment variable on the
- * server granted not "top up the pool" but full control over the contract, up to
- * and including redeployment. The assert_owner_one_yocto check (the F-2 fix) is no
- * defence at all here: it rejects function-call keys, while a full-access key
- * attaches a deposit freely.
+ * This module signs nothing, and that is a design decision rather than an omission.
+ * The owner of both contracts is the contract account itself, and that account holds
+ * a single full-access key. Such a key in a server environment variable would grant
+ * not "top up the pool" but full control of the contract, up to and including
+ * redeployment. assert_owner_one_yocto (the F-2 fix) is no defence here: it rejects
+ * function-call keys, while a full-access key attaches a deposit freely.
  *
- * Top-ups and withdrawals are now performed manually through near-cli from the
- * administrator's machine, and the bot only assembles the command. ADMIN_NEAR_PRIVATE_KEY
- * and ADMIN_NEAR_ACCOUNT must be removed from the environment on the host.
+ * Top-ups and withdrawals are therefore performed manually through near-cli from the
+ * administrator's machine, and the bot only assembles the command, converting the
+ * amount to yoctoNEAR. Do not add signing to this module.
  */
