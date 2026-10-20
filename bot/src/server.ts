@@ -26,7 +26,7 @@ const BOT_TOKEN   = process.env.BOT_TOKEN!;
 const CHANNEL_ID  = process.env.CHANNEL_ID!;
 const STAKING_CONTRACT = process.env.STAKING_CONTRACT || 'legion-staking.near';
 const RESTART_SECRET   = process.env.RESTART_SECRET || '';
-const API_SECRET       = process.env.API_SECRET || '';  // новый ключ для внешних запросов
+const API_SECRET       = process.env.API_SECRET || '';  // key for external requests
 const ADMIN_TELEGRAM_ID = parseInt(process.env.ADMIN_TELEGRAM_ID || '0');
 
 if (!WEBHOOK_URL) throw new Error('WEBHOOK_URL is missing');
@@ -49,16 +49,16 @@ app.use((req, res, next) => {
   res.setHeader('ngrok-skip-browser-warning', 'true');
   next();
 });
-// newapp.html не содержит хеша в имени (в отличие от /assets/*.js|css) — без
-// явного no-cache браузер/вебвью Telegram может отдавать старую закэшированную
-// версию даже после нового деплоя.
+// newapp.html carries no hash in its name (unlike /assets/*.js|css) - without an
+// explicit no-cache, the browser or Telegram's webview can serve a stale cached
+// version even after a fresh deploy.
 app.get('/newapp.html', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(path.join(__dirname, '..', 'public', 'newapp.html'));
 });
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// ── Rate limiting (простой in-memory) ────────────────────────────────────────
+// ── Rate limiting (simple, in-memory) ────────────────────────────────────────
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
 function rateLimit(ip: string, max = 30, windowMs = 60_000): boolean {
@@ -69,7 +69,7 @@ function rateLimit(ip: string, max = 30, windowMs = 60_000): boolean {
     return true; // OK
   }
   entry.count++;
-  if (entry.count > max) return false; // превышен лимит
+  if (entry.count > max) return false; // limit exceeded
   return true;
 }
 
@@ -86,7 +86,7 @@ const rateLimitMiddleware = (req: express.Request, res: express.Response, next: 
   next();
 };
 
-// ── Middleware: Проверка Telegram initData ────────────────────────────────────
+// ── Middleware: Telegram initData verification ───────────────────────────────
 function validateTelegramInitData(initData: string): { valid: boolean; userId?: number } {
   try {
     const params = new URLSearchParams(initData);
@@ -226,11 +226,11 @@ app.post('/api/verify-webapp', rateLimitMiddleware, async (req, res) => {
 });
 
 /**
- * Уведомление продавца о продаже NFT. Вызывается фронтендом сразу после
- * успешной покупки (buy_multiple). Перед отправкой сообщения бэкенд сам
- * проверяет ончейн, что заявленный покупатель реально теперь владеет каждым
- * из NFT — это защита от произвольных фейковых вызовов с чужими данными.
- * items: [{ tokenId, sellerAccount, price (строка NEAR, для текста) }]
+ * Notifies a seller that their NFT sold. Called by the frontend right after a
+ * successful purchase (buy_multiple). Before sending the message the backend
+ * verifies on-chain that the claimed buyer really does own each of the NFTs now -
+ * a guard against arbitrary forged calls carrying someone else's data.
+ * items: [{ tokenId, sellerAccount, price (a NEAR string, for the message text) }]
  */
 app.post('/api/notify-sale', rateLimitMiddleware, requireTelegramAuth, async (req, res) => {
   const { nearAccount, items } = req.body;
@@ -297,8 +297,8 @@ app.post('/api/rpc', rateLimitMiddleware, async (req, res) => {
 });
 
 app.get('/api/preview-reward', rateLimitMiddleware, async (req, res) => {
-  // Обратная совместимость: старые вызовы (например, внешний keep-alive cron)
-  // могут ещё присылать nft_count вместо add_count — трактуем как add_count.
+  // Backwards compatibility: older callers (an external keep-alive cron, say) may
+  // still send nft_count instead of add_count - treat it as add_count.
   const addCountRaw = (req.query.add_count as string) ?? (req.query.nft_count as string);
   const args = {
     period_days:          parseInt(req.query.period_days as string),
@@ -366,8 +366,8 @@ app.get('/api/status', rateLimitMiddleware, requireApiKey, (req, res) => {
   });
 });
 
-// Используется веб-интерфейсом (app.html), чтобы решить — показывать ли вкладку "Admin".
-// Ничего секретного не отдаёт, только true/false.
+// Used by the web interface (app.html) to decide whether to show the "Admin" tab.
+// Returns nothing sensitive, only true/false.
 app.post('/api/is-admin', rateLimitMiddleware, (req, res) => {
   const initData = req.body?.initData || req.headers['x-telegram-init-data'] as string;
   if (!initData) return res.json({ isAdmin: false });
@@ -379,10 +379,10 @@ async function main() {
   await initDb();
   await bot.telegram.deleteWebhook();
   await bot.telegram.setWebhook(`${WEBHOOK_URL}/webhook/${BOT_TOKEN}`);
-  // Токен НЕ логируем: раньше строка печаталась целиком и оседала в логах
-  // хостинга при каждом деплое. Токен даёт полный контроль над ботом —
-  // чтение всех сообщений, отправку от его имени и подмену вебхука.
-  console.log(`[BOT] Webhook установлен: ${WEBHOOK_URL}/webhook/***`);
+  // The token is NOT logged: the full string used to be printed and settled into
+  // the hosting provider's logs on every deploy. The token grants full control of
+  // the bot - reading every message, posting as the bot, and replacing the webhook.
+  console.log(`[BOT] Webhook set: ${WEBHOOK_URL}/webhook/***`);
   startCron();
   app.listen(PORT, () => console.log(`[SERVER] :${PORT}`));
 }

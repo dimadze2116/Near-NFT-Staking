@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import { getAllUsersInChannel, isMatureStakeNotified, markMatureStakeNotified } from './db';
 import { checkNftOwnership, getStakesForAccount } from './near';
 
-/** yoctoNEAR -> "1.2345" (4 знака после запятой) — для текста уведомления. */
+/** yoctoNEAR -> "1.2345" (4 decimal places) - for the notification text. */
 function yoctoToNear(v: string): string {
   try {
     const n = BigInt(v || '0');
@@ -17,20 +17,20 @@ function yoctoToNear(v: string): string {
 
 export function startCron() {
   cron.schedule('0 8,20 * * *', async () => {
-    console.log('[CRON] Запуск проверки NFT у участников канала...');
+    console.log('[CRON] Checking NFT ownership of channel members...');
     await checkAllMembers();
   });
-  console.log('[CRON] Задачи запущены (08:00 и 20:00 ежедневно)');
+  console.log('[CRON] Jobs scheduled (08:00 and 20:00 daily)');
 }
 
 async function checkAllMembers() {
   const members = getAllUsersInChannel();
-  console.log(`[CRON] Проверка ${members.length} участников...`);
+      console.log(`[CRON] Checking ${members.length} members...`);
 
   for (const member of members) {
     if (!member.near_account) continue;
     try {
-      // FIX 9: при ошибке RPC НЕ кикаем — требуем два независимых подтверждения
+      // FIX 9: on an RPC error do NOT kick - require two independent confirmations
       let hasNft = false;
       let nftCheckOk = false;
       let hasActiveStake = false;
@@ -49,8 +49,8 @@ async function checkAllMembers() {
         hasActiveStake = Array.isArray(stakes) && stakes.some((s: any) => !s.claimed);
         stakeCheckOk = true;
 
-        // Уведомление о созревших (готовых к клейму) стейках — по каждому
-        // конкретному стейку не чаще одного раза (отслеживается в БД).
+        // Notification about matured stakes (ready to claim) - at most once per
+        // individual stake (tracked in the database).
         if (Array.isArray(stakes)) {
           for (const s of stakes) {
             if (!s.is_mature || s.claimed) continue;
@@ -72,16 +72,16 @@ async function checkAllMembers() {
         console.error(`[CRON] Stakes check failed for ${member.telegram_id}:`, err);
       }
 
-      // Кикаем ТОЛЬКО если оба запроса успешны и оба вернули false
+      // Kick ONLY if both requests succeeded and both returned false
       if (nftCheckOk && stakeCheckOk && !hasNft && !hasActiveStake) {
-        console.log(`[CRON] NFT пропал у ${member.telegram_id} (${member.near_account}) — кик`);
+            console.log(`[CRON] NFT gone for ${member.telegram_id} (${member.near_account}) - kicking`);
         const { kickFromChannel } = await import('./bot');
         await kickFromChannel(member.telegram_id);
       } else if (!nftCheckOk || !stakeCheckOk) {
-        console.log(`[CRON] Пропускаем кик ${member.telegram_id} — ошибка RPC`);
+            console.log(`[CRON] Skipping kick of ${member.telegram_id} - RPC error`);
       }
     } catch (err) {
-      console.error(`[CRON] Ошибка проверки ${member.telegram_id}:`, err);
+          console.error(`[CRON] Failed to check ${member.telegram_id}:`, err);
     }
   }
 }

@@ -37,11 +37,11 @@ export async function initDb(): Promise<void> {
       lang          TEXT DEFAULT 'ru'
     );
 
-    -- Дедупликация уведомлений о созревших стейках (реальные данные о стейках
-    -- берутся из контракта через get_stakes_for_account, не из локальной БД —
-    -- see history: раньше здесь была отдельная таблица stakes для локального
-    -- трекинга, но она никогда не заполнялась и не читалась, убрана).
-    -- stake_id — тот же идентификатор, что возвращает контракт.
+    -- Deduplication of matured-stake notifications (the real stake data comes
+    -- from the contract through get_stakes_for_account, not from the local DB --
+    -- see history: there used to be a separate stakes table here for local
+    -- tracking, but it was never written to or read from, so it was removed).
+    -- stake_id is the same identifier the contract returns.
     CREATE TABLE IF NOT EXISTS notified_matures (
       stake_id      TEXT PRIMARY KEY,
       telegram_id   INTEGER NOT NULL,
@@ -49,16 +49,16 @@ export async function initDb(): Promise<void> {
     );
   `);
 
-  // Миграция: добавить колонку lang если не существует
+  // Migration: add the lang column if it does not exist
   try {
     db.run(`ALTER TABLE users ADD COLUMN lang TEXT DEFAULT 'ru'`);
     save();
   } catch {
-    // колонка уже существует — игнорируем
+    // the column already exists - ignore
   }
 
   save();
-  console.log('[DB] Инициализирована');
+  console.log('[DB] Initialised');
 }
 
 function save() {
@@ -130,8 +130,8 @@ export function getUser(telegramId: number): UserRow | undefined {
   return get<UserRow>(`SELECT * FROM users WHERE telegram_id = ?`, [telegramId]);
 }
 
-/** Поиск пользователя по NEAR-аккаунту — нужен, чтобы уведомить продавца о
- * продаже NFT, зная только его near_account (из события покупки на фронтенде). */
+/** Look up a user by NEAR account - needed to notify a seller that their NFT
+ * sold, knowing only their near_account (from the purchase event on the frontend). */
 export function getUserByNearAccount(nearAccount: string): UserRow | undefined {
   return get<UserRow>(`SELECT * FROM users WHERE near_account = ?`, [nearAccount]);
 }
@@ -159,7 +159,7 @@ export function cleanOldNonces() {
   run(`DELETE FROM nonces WHERE created_at < datetime('now', '-10 minutes')`);
 }
 
-// --- Уведомления о созревших стейках (дедупликация) ---
+// --- Matured-stake notifications (deduplication) ---
 
 export function isMatureStakeNotified(stakeId: string): boolean {
   const row = get<{ stake_id: string }>(`SELECT stake_id FROM notified_matures WHERE stake_id = ?`, [stakeId]);

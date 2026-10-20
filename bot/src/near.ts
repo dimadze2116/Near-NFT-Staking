@@ -13,9 +13,9 @@ const RPC_URL = NEAR_NETWORK === 'mainnet'
 const provider = new nearAPI.providers.JsonRpcProvider({ url: RPC_URL });
 const nearKit = new Near({ network: NEAR_NETWORK as 'mainnet' | 'testnet' });
 
-// Хранилища ключей и подписывающего клиента здесь намеренно нет: бот работает
-// с контрактами только на чтение. Всё, что меняет состояние, выполняется
-// администратором вручную через near-cli.
+// There is deliberately no key store and no signing client here: the bot only
+// reads from the contracts. Everything that changes state is performed manually
+// by an administrator through near-cli.
 
 export { provider, STAKING_CONTRACT };
 
@@ -70,9 +70,9 @@ export async function checkNftOwnership(accountId: string): Promise<{ hasNft: bo
   }
 }
 
-/** Текущий владелец конкретного NFT — нужен, чтобы перед отправкой уведомления
- * о продаже убедиться, что покупатель реально теперь владеет этим NFT
- * (защита от произвольных фейковых вызовов /api/notify-sale). */
+/** Current owner of a specific NFT - needed so that, before sending a sale
+ * notification, the backend can confirm the buyer really does own that NFT now
+ * (a guard against arbitrary forged calls to /api/notify-sale). */
 export async function getNftOwner(tokenId: string): Promise<string | null> {
   try {
     const result = await provider.query({
@@ -163,8 +163,8 @@ export async function getUniqueClaimersCount(): Promise<number> {
 }
 
 /**
- * Постраничный список заклеймленных стейков с деталями (сумма, даты, период) —
- * напрямую из контракта, одним вызовом.
+ * Paginated list of claimed stakes with details (amount, dates, period) -
+ * straight from the contract, in a single call.
  */
 export async function getClaimedStakes(fromIndex = 0, limit = 50): Promise<ClaimedStakeView[]> {
   try {
@@ -176,7 +176,7 @@ export async function getClaimedStakes(fromIndex = 0, limit = 50): Promise<Claim
       finality: 'final',
     }) as any;
     const claims: ClaimedStakeView[] = JSON.parse(Buffer.from(result.result).toString());
-    // Новые клеймы — сверху
+    // Newest claims first
     claims.sort((a, b) => b.unlocks_at - a.unlocks_at);
     return claims;
   } catch {
@@ -198,9 +198,9 @@ export async function getAccountBalance(accountId: string = STAKING_CONTRACT): P
 }
 
 /**
- * Перевод суммы из NEAR в yoctoNEAR. Оставлен, потому что бот теперь не
- * подписывает транзакции сам, а формирует готовую CLI-команду — и пересчёт
- * в yocto вручную слишком легко сделать с ошибкой на порядок.
+ * Converts an amount from NEAR to yoctoNEAR. Kept because the bot no longer
+ * signs transactions itself but assembles a ready CLI command instead - and
+ * converting to yocto by hand is far too easy to get wrong by an order of magnitude.
  */
 export function nearToYocto(amountNear: string): string {
   const [whole, frac = ''] = amountNear.trim().split('.');
@@ -210,17 +210,17 @@ export function nearToYocto(amountNear: string): string {
 }
 
 /*
- * УДАЛЕНО СОЗНАТЕЛЬНО: callContract / depositRewards / withdrawRewards.
+ * DELIBERATELY REMOVED: callContract / depositRewards / withdrawRewards.
  *
- * Эти функции подписывали транзакции ключом из ADMIN_NEAR_PRIVATE_KEY. Владелец
- * обоих контрактов — сами контрактные аккаунты, и на legion-staking.near
- * существует единственный ключ, полнодоступный. То есть переменная окружения на
- * сервере давала не «пополнить пул», а полный контроль над контрактом, вплоть
- * до передеплоя. Проверка assert_owner_one_yocto (фикс F-2) от этого не защищает
- * вовсе: она отсекает function-call ключи, а full-access депозит прикладывает
- * свободно.
+ * These functions signed transactions with the key from ADMIN_NEAR_PRIVATE_KEY. The
+ * owner of both contracts is the contract account itself, and legion-staking.near
+ * has exactly one key, which is full-access. So that environment variable on the
+ * server granted not "top up the pool" but full control over the contract, up to
+ * and including redeployment. The assert_owner_one_yocto check (the F-2 fix) is no
+ * defence at all here: it rejects function-call keys, while a full-access key
+ * attaches a deposit freely.
  *
- * Теперь пополнение и вывод выполняются вручную через near-cli с машины
- * администратора, а бот только формирует готовую команду. ADMIN_NEAR_PRIVATE_KEY
- * и ADMIN_NEAR_ACCOUNT должны быть удалены из окружения на Render.
+ * Top-ups and withdrawals are now performed manually through near-cli from the
+ * administrator's machine, and the bot only assembles the command. ADMIN_NEAR_PRIVATE_KEY
+ * and ADMIN_NEAR_ACCOUNT must be removed from the environment on the host.
  */

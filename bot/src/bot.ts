@@ -131,8 +131,8 @@ function tr(telegramId: number, key: keyof typeof t.ru): string {
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 
-// Переводит yoctoNEAR (строка/BigInt) в человекочитаемый NEAR с 4 знаками после запятой.
-// Та же логика, что и yoctoToNear() в app.html — держим единообразие форматирования.
+// Converts yoctoNEAR (string/BigInt) to human-readable NEAR with 4 decimal places.
+// Same logic as yoctoToNear() in app.html - formatting is kept consistent.
 function yoctoToNear(v: string | number): string {
   try {
     const n = BigInt(String(v || '0'));
@@ -405,7 +405,7 @@ bot.action(/^admin_pool$/, async (ctx) => {
 bot.action(/^admin_stakes$/, async (ctx) => {
   if (!isAdmin(ctx)) return ctx.reply('⛔ Доступ только для админа.');
   const stats = await getLocalStakesSummary();
-  // Получаем данные с контракта
+  // Fetch the data from the contract
   let contractTotal = '?';
   try {
     const result = await fetch(`https://free.rpc.fastnear.com`, {
@@ -427,8 +427,8 @@ bot.action(/^admin_stakes$/, async (ctx) => {
     contractTotal = decoded.total_staked;
   } catch {}
 
-  // Заклеймленные — берём напрямую с контракта (глобально, по ВСЕМ аккаунтам,
-  // а не только по тем, что есть в локальной БД бота)
+  // Claimed stakes come straight from the contract (globally, across ALL accounts,
+  // not only the ones present in the bot's local database)
   const [claimedCount, claimedUnique] = await Promise.all([
     getClaimedStakesCount(),
     getUniqueClaimersCount(),
@@ -454,7 +454,7 @@ bot.action(/^admin_claimed$/, async (ctx) => {
     getClaimedStakesCount(),
     getClaimedStakes(),
   ]);
-  const claims = allClaims.slice(0, 15); // последние по времени разблокировки, топ-15 для превью
+    const claims = allClaims.slice(0, 15); // latest by unlock time, top 15 for the preview
 
   if (claims.length === 0) {
     await ctx.editMessageText('🔖 Заклеймлено: 0\n\nПока никто не забирал награды.', adminMenu()).catch(() => undefined);
@@ -541,10 +541,10 @@ bot.action(/^confirm_cancel$/, async (ctx) => {
   await ctx.answerCbQuery().catch(() => undefined);
 });
 
-// Бот больше не подписывает транзакции: приватный ключ владельца контракта
-// не должен лежать на сервере. Вместо исполнения выдаём готовую CLI-команду —
-// пересчёт в yoctoNEAR бот делает сам, потому что ошибиться на порядок вручную
-// слишком легко.
+// The bot no longer signs transactions: the contract owner's private key must not
+// sit on the server. Instead of executing, it hands back a ready CLI command - the
+// bot converts to yoctoNEAR itself, because getting that wrong by an order of
+// magnitude by hand is far too easy.
 
 bot.command('deposittopup', async (ctx) => {
   if (!isAdmin(ctx)) return ctx.reply('⛔ Admin only.');
