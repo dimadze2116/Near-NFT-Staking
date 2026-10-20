@@ -11,34 +11,34 @@ const PERIOD_7_DAYS: u64  = 7  * 24 * 60 * 60;
 const PERIOD_14_DAYS: u64 = 14 * 24 * 60 * 60;
 const PERIOD_30_DAYS: u64 = 30 * 24 * 60 * 60;
 
-/// Тиры APR (в basis points, 1% = 100 bps) по ПОЗИЦИИ NFT у стейкера
-/// (его 1-й, 2-й, ... N-й застейканный NFT — не количество NFT в этой транзакции).
-/// Подобраны так, чтобы бюджет 100 NEAR/месяц гарантированно не превышался
-/// даже в худшем случае: один стейкер занимает весь потолок в MAX_ACTIVE_STAKES
-/// NFT на максимальный срок (30 дней). См. change-apr-and-batch.md.
+/// APR tiers (in basis points, 1% = 100 bps) by the POSITION of an NFT for a staker
+/// (their 1st, 2nd, ... Nth staked NFT - not the number of NFTs in this transaction).
+/// Chosen so that a budget of 100 NEAR/month cannot be exceeded even in the worst
+/// case: a single staker occupies the entire MAX_ACTIVE_STAKES ceiling of NFTs for
+/// the longest period (30 days). See change-apr-and-batch.md.
 ///
-/// ВАЖНО (фикс бага): раньше формула умножала итоговую награду на ПОЗИЦИЮ NFT
-/// (nft_count), из-за чего 50-й NFT стейкера считался так, будто застейкано
-/// сразу 50 штук. Теперь позиция используется только чтобы выбрать тир —
-/// сама награда за КАЖДЫЙ отдельный NFT берётся из TIER_APR_BPS[tier], без
-/// домножения на позицию.
+/// IMPORTANT (bug fix): the formula used to multiply the final reward by the NFT's
+/// POSITION (nft_count), so a staker's 50th NFT was computed as if 50 had been
+/// staked at once. The position now only selects the tier - the reward for EACH
+/// individual NFT comes from TIER_APR_BPS[tier], with no multiplication by the
+/// position itself.
 const TIER_APR_BPS: [u64; 6] = [
-    2420, // позиция 1-10
-    2904, // позиция 11-20
-    3319, // позиция 21-30
-    3733, // позиция 31-40
-    4148, // позиция 41-50
-    4205, // позиция 51+ (максимум, дальше не растёт)
+    2420, // position 1-10
+    2904, // position 11-20
+    3319, // position 21-30
+    3733, // position 31-40
+    4148, // position 41-50
+    4205, // position 51+ (the cap; it does not grow further)
 ];
 
-/// Жёсткий потолок одновременно активных (незаклеймленных) NFT по всему контракту.
-/// Обеспечивает математическую гарантию бюджета — см. change-apr-and-batch.md.
+/// Hard ceiling on simultaneously active (unclaimed) NFTs across the whole contract.
+/// This is what makes the budget guarantee mathematical - see change-apr-and-batch.md.
 const MAX_ACTIVE_STAKES: u64 = 300;
 
-/// Отсрочка, после которой стейк считается брошенным и владелец контракта может
-/// вернуть NFT его владельцу принудительно (admin_return_nft). 90 дней сверх срока
-/// разблокировки: заведомо больше самого длинного периода (30 дней), чтобы метод
-/// нельзя было применить к живой позиции.
+/// Grace period after which a stake counts as abandoned and the contract owner may
+/// force the NFT back to its owner (admin_return_nft). 90 days beyond the unlock
+/// time: comfortably longer than the longest period (30 days), so the method can
+/// never be applied to a live position.
 const ABANDONED_GRACE_SEC: u64 = 90 * 24 * 60 * 60;
 
 const NFT_VALUE_YOCTO: u128 = 10 * 1_000_000_000_000_000_000_000_000u128;
@@ -49,7 +49,7 @@ const GAS_REWARD_PAY:   Gas  = Gas::from_tgas(10);
 
 // ─── External contract interfaces ─────────────────────────────────────────────
 
-/// Интерфейс NFT контракта (NEP-171)
+/// Interface of the NFT contract (NEP-171)
 #[ext_contract(ext_nft)]
 trait NftContract {
     fn nft_transfer(
@@ -60,7 +60,7 @@ trait NftContract {
     );
 }
 
-/// Callback интерфейс нашего контракта
+/// Callback interface of this contract
 #[ext_contract(ext_self)]
 trait SelfCallback {
     fn on_unstake_complete(
@@ -122,11 +122,11 @@ pub struct StakeView {
     pub claimed:     bool,
 }
 
-/// Отдельная view-структура для глобального списка заклеймленных стейков (админка):
-/// в отличие от StakeView, содержит owner, т.к. выборка идёт не по одному аккаунту,
-/// а по всему контракту сразу.
-/// owner: String (не AccountId) — сохраняем этот выбор из прошлой версии, он точно
-/// проверен и работает, менять нет смысла без явной необходимости.
+/// A separate view struct for the global list of claimed stakes (admin panel):
+/// unlike StakeView it carries owner, because the selection is not made per account
+/// but across the whole contract at once.
+/// owner: String (not AccountId) - this choice is kept from the previous version; it
+/// is tested and works, and there is no reason to change it without a clear need.
 #[near(serializers = [json])]
 pub struct ClaimedStakeView {
     pub stake_id:    String,
@@ -138,7 +138,7 @@ pub struct ClaimedStakeView {
     pub reward_near: U128,
 }
 
-/// Запись в топе лидерборда — ранжирование по количеству активных (незаклеймленных) NFT.
+/// An entry in the leaderboard - ranked by number of active (unclaimed) NFTs.
 #[near(serializers = [json])]
 pub struct LeaderboardEntry {
     pub owner:        String,
@@ -146,7 +146,7 @@ pub struct LeaderboardEntry {
     pub total_reward: U128,
 }
 
-/// Позиция конкретного аккаунта в общем рейтинге (для карточки "ваша позиция").
+/// Position of a specific account in the overall ranking (for the "your rank" card).
 #[near(serializers = [json])]
 pub struct MyRankEntry {
     pub position:     u32,
@@ -179,7 +179,7 @@ pub struct NftStakingContract {
 #[near]
 impl NftStakingContract {
 
-    // ── Init ──────────────────────────────────────────────────────────────────
+    // ── Init ───────────────────────────────────────────────────────────────
 
     #[init]
     pub fn new(owner_id: AccountId) -> Self {
@@ -192,7 +192,7 @@ impl NftStakingContract {
         }
     }
 
-    // ── Owner ─────────────────────────────────────────────────────────────────
+    // ── Owner ──────────────────────────────────────────────────────────────
 
     #[payable]
     pub fn deposit_rewards(&mut self) {
@@ -206,20 +206,20 @@ impl NftStakingContract {
         ));
     }
 
-    /// Аварийный возврат NFT по брошенному стейку.
+    /// Emergency return of an NFT from an abandoned stake.
     ///
-    /// Две сознательные меры против злоупотребления правами владельца контракта:
+    /// Two deliberate safeguards against abuse of the contract owner's rights:
     ///
-    /// 1. Получатель НЕ является параметром. NFT всегда уходит на `stake.owner`,
-    ///    записанный в состоянии. Владелец контракта может инициировать возврат,
-    ///    но не может выбрать, кому. Это убирает вектор кражи, который есть у
-    ///    привычной формы `admin_return_asset(id, to)`.
-    /// 2. Метод работает только по стейкам, у которых с момента разблокировки
-    ///    прошло больше ABANDONED_GRACE_SEC. По активным и недавно созревшим
-    ///    позициям он недоступен — забрать чужой рабочий стейк нельзя.
+    /// 1. The recipient is NOT a parameter. The NFT always goes to the `stake.owner`
+    ///    recorded in state. The contract owner can trigger a return but cannot
+    ///    choose to whom. That removes the theft vector present in the usual form
+    ///    `admin_return_asset(id, to)`.
+    /// 2. The method only works on stakes where more than ABANDONED_GRACE_SEC has
+    ///    passed since unlock. It is unavailable for active and recently matured
+    ///    positions - someone else's working stake cannot be taken.
     ///
-    /// Зарезервированная награда возвращается в пул (закрывает F-6: раньше резерв
-    /// по брошенному стейку зависал вне пула навсегда).
+    /// The reserved reward goes back to the pool (this closes F-6: the reserve of an
+    /// abandoned stake used to hang outside the pool forever).
     #[payable]
     pub fn admin_return_nft(&mut self, stake_id: String) -> Promise {
         self.assert_owner_one_yocto();
@@ -239,13 +239,13 @@ impl NftStakingContract {
             "admin_return_nft: stake is not abandoned yet — grace period has not passed"
         );
 
-        // Помечаем ДО промиса — иначе повторный вызов в окне до колбэка пройдёт
-        // проверки заново и отправит второй nft_transfer.
+        // Mark it BEFORE the promise - otherwise a repeat call in the window before the
+        // callback would pass the checks again and send a second nft_transfer.
         let mut updated = stake.clone();
         updated.claimed = true;
         self.stakes.insert(stake_id.clone(), updated);
 
-        // Резерв возвращаем в пул: владелец за наградой не пришёл.
+        // The reserve returns to the pool: the owner never came for the reward.
         self.reward_pool += stake.reward_near.0;
 
         let nft_contract: AccountId = NFT_CONTRACT_ID.parse().unwrap();
@@ -270,7 +270,7 @@ impl NftStakingContract {
             )
     }
 
-    /// Вывод с callback — если Promise упадёт, reward_pool восстанавливается
+    /// Withdrawal with a callback - if the Promise fails, reward_pool is restored
     #[payable]
     pub fn withdraw_rewards(&mut self, amount: U128) -> Promise {
         self.assert_owner_one_yocto();
@@ -280,13 +280,13 @@ impl NftStakingContract {
             self.reward_pool >= yocto,
             "Requested amount exceeds reward pool balance"
         );
-        // FIX 3: вычитаем ПОСЛЕ callback подтверждения
-        // Временно резервируем — вычтем в on_withdraw_complete
+        // FIX 3: deduct AFTER the callback confirms
+        // Reserve it for now - the deduction happens in on_withdraw_complete
         env::log_str(&format!(
             "WITHDRAW_INIT | amount={} yN | pool_before={} yN",
             yocto, self.reward_pool
         ));
-        self.reward_pool -= yocto; // вычитаем сразу (защита от double-spend)
+        self.reward_pool -= yocto; // deduct right away (guards against double-spend)
 
         Promise::new(self.owner_id.clone())
             .transfer(NearToken::from_yoctonear(yocto))
@@ -297,24 +297,24 @@ impl NftStakingContract {
             )
     }
 
-    /// F-1 (было clear_all_stakes): прежний метод очищал ВСЕ стейки разом и обнулял
-    /// reward_pool. Поскольку NFT физически лежат на балансе контракта, а единственный
-    /// путь их вернуть — unstake, который требует наличия записи, один вызов запирал
-    /// все застейканные NFT пользователей навсегда. Аварийного вывода в контракте нет.
-    /// Метод удалён и заменён на безопасный аналог ниже.
+    /// F-1 (was clear_all_stakes): the previous method wiped ALL stakes at once and
+    /// zeroed reward_pool. Since the NFTs physically sit on the contract balance and the
+    /// only way back is unstake, which requires the record to exist, a single call locked
+    /// every user's staked NFT away forever. The contract has no emergency withdrawal.
+    /// The method was deleted and replaced by the safe equivalent below.
     ///
-    /// Удаляет ТОЛЬКО заклеймленные записи — по ним NFT уже возвращены владельцам,
-    /// поэтому потерять нечего. Активные стейки и reward_pool не трогаются.
-    /// F-3: заклеймленные записи раньше копились в self.stakes без предела и удорожали
-    /// каждый новый стейк (полный обход карты в nft_on_transfer). Этот метод даёт
-    /// способ их подчищать без миграции состояния.
-    /// limit ограничивает объём за вызов — метод рассчитан на многократный запуск.
+    /// Deletes ONLY claimed records - their NFTs have already gone back to their owners,
+    /// so there is nothing to lose. Active stakes and reward_pool are left untouched.
+    /// F-3: claimed records used to accumulate in self.stakes without limit and made
+    /// every new stake more expensive (a full scan of the map in nft_on_transfer). This
+    /// method is a way to prune them without a state migration.
+    /// limit bounds the work per call - the method is meant to be run repeatedly.
     #[payable]
     pub fn prune_claimed_stakes(&mut self, limit: u32) -> u32 {
         self.assert_owner_one_yocto();
         require!(limit > 0 && limit <= 100, "prune: limit must be between 1 and 100");
 
-        // Сначала собираем, потом удаляем — нельзя менять карту во время обхода.
+        // Collect first, delete after - the map must not be mutated while iterating.
         let to_remove: Vec<(String, AccountId)> = self
             .stakes
             .iter()
@@ -327,8 +327,8 @@ impl NftStakingContract {
 
         for (stake_id, owner) in to_remove {
             self.stakes.remove(&stake_id);
-            // Индекс аккаунта тоже чистим, иначе набор растёт вечно и удорожает
-            // active_stake_count для этого пользователя.
+            // Clean the account index too, otherwise the set grows forever and makes
+            // active_stake_count more expensive for that user.
             if let Some(ids) = self.stakes_by_account.get_mut(&owner) {
                 ids.remove(&stake_id);
             }
@@ -338,7 +338,7 @@ impl NftStakingContract {
         count
     }
 
-    // ── NFT Receiver ──────────────────────────────────────────────────────────
+    // ── NFT Receiver ───────────────────────────────────────────────────────
 
     pub fn nft_on_transfer(
         &mut self,
@@ -348,11 +348,11 @@ impl NftStakingContract {
         token_id: String,
         msg: String,
     ) -> PromiseOrValue<bool> {
-        // F-7: владельцем стейка обязан быть ПРЕЖНИЙ ВЛАДЕЛЕЦ NFT, а не тот, кто
-        // вызвал nft_transfer_call. По NEP-171 это разные аккаунты: при использовании
-        // апрувов (NEP-178) одобренный аккаунт может перенести чужой NFT, и раньше
-        // он же становился владельцем стейка — то есть забирал при анстейке чужой
-        // NFT вместе с наградой. В nft-marketplace этот выбор изначально сделан верно.
+        // F-7: the stake owner must be the PREVIOUS OWNER of the NFT, not whoever called
+        // nft_transfer_call. Under NEP-171 these are different accounts: with approvals
+        // (NEP-178) an approved account can move someone else's NFT, and it used to become
+        // the stake owner - meaning on unstake it could take that NFT along with the
+        // reward. In nft-marketplace this choice was made correctly from the start.
         let owner_id = previous_owner_id;
         let nft_contract: AccountId = NFT_CONTRACT_ID
             .parse()
@@ -391,8 +391,8 @@ impl NftStakingContract {
             }
         }
 
-        // Потолок активных NFT по всему контракту — гарантирует бюджет пула
-        // математически, независимо от того, как распределятся сроки/стейкеры.
+        // Ceiling on active NFTs across the whole contract - this is what guarantees the
+        // pool budget mathematically, however the periods and stakers happen to spread.
         let total_active = self.stakes.iter().filter(|(_, s)| !s.claimed).count() as u64;
         if total_active >= MAX_ACTIVE_STAKES {
             env::log_str(&format!(
@@ -450,10 +450,10 @@ impl NftStakingContract {
         PromiseOrValue::Value(false)
     }
 
-    // ── Unstake с callback ────────────────────────────────────────────────────
+    // ── Unstake with a callback ────────────────────────────────────────────
 
-    /// FIX 1: unstake теперь использует callback on_unstake_complete
-    /// Если nft_transfer упадёт — стейк восстанавливается, пользователь не теряет NFT/награду
+    /// FIX 1: unstake now goes through the on_unstake_complete callback.
+    /// If nft_transfer fails the stake is restored - the user loses neither NFT nor reward
     #[payable]
     pub fn unstake(&mut self, token_id: String) -> Promise {
         require!(
@@ -486,7 +486,7 @@ impl NftStakingContract {
             )
         );
 
-        // Помечаем как claimed ПЕРЕД промисом (защита от reentrancy)
+        // Mark as claimed BEFORE the promise (reentrancy guard)
         let mut updated = stake.clone();
         updated.claimed = true;
         self.stakes.insert(stake_id.clone(), updated);
@@ -510,18 +510,18 @@ impl NftStakingContract {
             )
             .then(
                 ext_self::ext(env::current_account_id())
-                    // 30 TGas вместо прежних 20: внутри этого колбэка теперь создаётся
-                    // ещё один промис (перевод награды) со своим колбэком на GAS_REWARD_PAY.
+                    // 30 TGas instead of the previous 20: this callback now creates
+                    // another promise (the reward transfer) with its own GAS_REWARD_PAY callback.
                     .with_static_gas(Gas::from_tgas(30))
                     .on_unstake_complete(caller, token_id, stake_id, reward)
             )
     }
 
-    // ── Callbacks (вызываются только самим контрактом) ────────────────────────
+    // ── Callbacks (invoked only by the contract itself) ────────────────────
 
-    /// Callback после nft_transfer в unstake.
-    /// Если transfer успешен — выплачиваем награду.
-    /// Если transfer упал — откатываем claimed = false, возвращаем награду в пул.
+    /// Callback after nft_transfer in unstake.
+    /// If the transfer succeeded - pay out the reward.
+    /// If the transfer failed - roll claimed back to false and return the reward to the pool.
     #[private]
     #[allow(deprecated)]
     pub fn on_unstake_complete(
@@ -537,10 +537,10 @@ impl NftStakingContract {
         );
 
         if transfer_succeeded {
-            // NFT успешно возвращён — выплачиваем NEAR награду.
-            // F-4: перевод идёт под колбэком. Раньше он уходил «в никуда»: если
-            // перевод не проходил (например, аккаунт получателя удалён), награда
-            // терялась молча, а reward_pool был уменьшен ещё на этапе стейка.
+            // The NFT came back successfully - pay out the NEAR reward.
+            // F-4: the transfer goes under a callback. It used to go out "into the void":
+            // if it did not land (a deleted recipient account, say), the reward was lost
+            // silently, while reward_pool had already been reduced at stake time.
             env::log_str(&format!(
                 "UNSTAKE_SUCCESS | nft={} | owner={} | reward={} yN",
                 token_id, caller, reward.0
@@ -555,24 +555,24 @@ impl NftStakingContract {
                     )
             )
         } else {
-            // NFT transfer упал — откатываем стейк
+            // The NFT transfer failed - roll the stake back
             env::log_str(&format!(
                 "UNSTAKE_FAILED | nft={} | owner={} | reason=nft_transfer_failed — rolling back",
                 token_id, caller
             ));
-            // Восстанавливаем стейк
+            // Restore the stake
             if let Some(mut stake) = self.stakes.get(&stake_id).cloned() {
                 stake.claimed = false;
                 self.stakes.insert(stake_id, stake);
             }
-            // Возвращаем награду в пул
+            // Return the reward to the pool
             self.reward_pool += reward.0;
             None
         }
     }
 
-    /// Callback аварийного возврата. При неудаче откатываем всё, что списали
-    /// на пути туда: снимаем пометку claimed и убираем награду обратно из пула.
+    /// Callback of the emergency return. On failure, roll back everything deducted on
+    /// the way in: clear the claimed flag and take the reward back out of the pool.
     #[private]
     #[allow(deprecated)]
     pub fn on_admin_return_complete(&mut self, stake_id: String, stake: StakeInfo) {
@@ -597,13 +597,13 @@ impl NftStakingContract {
         }
     }
 
-    /// F-4: Callback после перевода награды в on_unstake_complete.
-    /// NFT к этому моменту уже у пользователя, поэтому откатывать стейк НЕЛЬЗЯ:
-    /// сброс claimed = false создал бы запись, выглядящую активной, при том что
-    /// самого NFT на контракте больше нет — и её нельзя было бы ни заклеймить,
-    /// ни удалить (тот же класс проблемы, что фантомные объявления в маркете).
-    /// Поэтому при неудаче возвращаем только сами средства в пул и явно логируем
-    /// событие, чтобы владелец мог разобрать случай вручную.
+    /// F-4: callback after the reward transfer in on_unstake_complete.
+    /// By this point the NFT is already with the user, so the stake must NOT be rolled
+    /// back: resetting claimed = false would create a record that looks active while the
+    /// NFT is no longer held by the contract - and it could be neither claimed nor
+    /// deleted (the same class of problem as phantom listings in the marketplace).
+    /// So on failure only the funds go back to the pool, and the event is logged
+    /// explicitly so the owner can resolve the case by hand.
     #[private]
     #[allow(deprecated)]
     pub fn on_reward_paid(&mut self, caller: AccountId, stake_id: String, reward: U128) {
@@ -626,8 +626,8 @@ impl NftStakingContract {
         }
     }
 
-    /// Callback после withdraw_rewards.
-    /// Если transfer упал — восстанавливаем reward_pool.
+    /// Callback after withdraw_rewards.
+    /// If the transfer failed - restore reward_pool.
     #[private]
     #[allow(deprecated)]
     pub fn on_withdraw_complete(&mut self, amount: U128) {
@@ -642,7 +642,7 @@ impl NftStakingContract {
                 amount.0, self.reward_pool
             ));
         } else {
-            // Возвращаем средства в пул
+            // Return the funds to the pool
             self.reward_pool += amount.0;
             env::log_str(&format!(
                 "WITHDRAW_FAILED | amount={} yN | pool_restored={} yN",
@@ -651,7 +651,7 @@ impl NftStakingContract {
         }
     }
 
-    // ── View Methods ──────────────────────────────────────────────────────────
+    // ── View Methods ───────────────────────────────────────────────────────
 
     pub fn get_stake(&self, account_id: AccountId, token_id: String) -> Option<StakeView> {
         let stake_id = format!("{}:{}", account_id, token_id);
@@ -705,16 +705,16 @@ impl NftStakingContract {
         }
     }
 
-    /// Кол-во заклеймленных (уже выплаченных) стейков по всему контракту —
-    /// в отличие от get_stakes_for_account, не требует знать account_id заранее.
+    /// Number of claimed (already paid out) stakes across the whole contract -
+    /// unlike get_stakes_for_account it does not require knowing account_id up front.
     pub fn get_claimed_stakes_count(&self) -> U128 {
         U128(self.stakes.iter().filter(|(_, s)| s.claimed).count() as u128)
     }
 
-    /// Список ключей заклеймленных стейков в формате "owner:token_id" (это тот же формат,
-    /// что и внутренний stake_id — см. как формируется stake_id в fn stake()).
-    /// Лёгкий вариант без деталей — оставлен как самостоятельный простой метод,
-    /// полную информацию по каждому стейку см. в get_claimed_stakes() ниже.
+    /// List of claimed stake keys in the form "owner:token_id" (the same format as the
+    /// internal stake_id - see how stake_id is built in fn stake()).
+    /// A light variant without details, kept as a simple standalone method; for the full
+    /// information on each stake see get_claimed_stakes() below.
     pub fn get_claimed_stake_ids(&self) -> Vec<String> {
         let mut result: Vec<String> = Vec::new();
         for (id, s) in self.stakes.iter() {
@@ -725,7 +725,7 @@ impl NftStakingContract {
         result
     }
 
-    /// Уникальные аккаунты, которые уже что-то заклеймили.
+    /// Unique accounts that have already claimed something.
     pub fn get_unique_claimers_count(&self) -> U128 {
         let unique = self.stakes.iter()
             .filter(|(_, s)| s.claimed)
@@ -735,15 +735,15 @@ impl NftStakingContract {
         U128(unique)
     }
 
-    /// Постраничный список заклеймленных стейков с полными деталями (сумма, даты, период).
-    /// from_index/limit — пагинация. Ранее считалось, что этот вариант (структура +
-    /// пагинация) стабильно падает в WasmTrap на этой связке near-sdk/toolchain — но
-    /// впоследствии выяснилось, что причиной был баг самого near-cli-rs при передаче
-    /// непустых аргументов через as-read-only (не контракта). Проверено напрямую через
-    /// RPC (в обход near-cli-rs) — работает корректно.
+    /// Paginated list of claimed stakes with full details (amount, dates, period).
+    /// from_index/limit - pagination. This variant (struct + pagination) was believed to
+    /// fail reliably with WasmTrap on this near-sdk/toolchain combination - but the cause
+    /// turned out to be a bug in near-cli-rs itself when passing non-empty arguments
+    /// through as-read-only, not a problem in the contract. Checked directly over RPC
+    /// (bypassing near-cli-rs) - it works correctly.
     ///
-    /// Не паникуем на нестандартном period_days (легаси/битые записи) — для них
-    /// unlocks_at просто равен staked_at, вместо падения всей выборки.
+    /// Do not panic on a non-standard period_days (legacy/corrupted records) - for those
+    /// unlocks_at simply equals staked_at, instead of failing the whole selection.
     pub fn get_claimed_stakes(&self, from_index: u64, limit: u64) -> Vec<ClaimedStakeView> {
         let mut result: Vec<ClaimedStakeView> = Vec::new();
         let mut idx: u64 = 0;
@@ -778,10 +778,10 @@ impl NftStakingContract {
         result
     }
 
-    /// Общая приватная агрегация для лидерборда: (owner, кол-во активных NFT, сумма наград).
-    /// stakes_by_account — LookupMap, не поддерживает перечисление всех ключей, поэтому
-    /// считаем через self.stakes.iter() (IterableMap, уже используется для аналогичных
-    /// агрегаций в get_unique_claimers_count/get_claimed_stakes_count).
+    /// Shared private aggregation for the leaderboard: (owner, active NFT count, total reward).
+    /// stakes_by_account is a LookupMap and cannot enumerate its keys, so the count goes
+    /// through self.stakes.iter() (an IterableMap, already used for the same kind of
+    /// aggregation in get_unique_claimers_count/get_claimed_stakes_count).
     fn compute_rankings(&self) -> Vec<(AccountId, u32, u128)> {
         let mut agg: std::collections::HashMap<AccountId, (u32, u128)> = std::collections::HashMap::new();
         for (_, s) in self.stakes.iter() {
@@ -796,15 +796,15 @@ impl NftStakingContract {
             .into_iter()
             .map(|(owner, (count, reward))| (owner, count, reward))
             .collect();
-        // Вторичный критерий (owner) — обязателен для детерминизма: без него при
-        // равном nft_count порядок зависел бы от обхода HashMap, который меняется
-        // между отдельными вызовами (get_leaderboard vs get_my_rank могли бы
-        // расходиться в позиции для аккаунтов с одинаковым количеством NFT).
+        // The secondary criterion (owner) is required for determinism: without it, ties on
+        // nft_count would depend on HashMap iteration order, which changes between separate
+        // calls (get_leaderboard and get_my_rank could then disagree on the position of
+        // accounts holding the same number of NFTs).
         list.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
         list
     }
 
-    /// Топ стейкеров по количеству активных (незаклеймленных) NFT, по убыванию.
+    /// Top stakers by number of active (unclaimed) NFTs, descending.
     pub fn get_leaderboard(&self, limit: u64) -> Vec<LeaderboardEntry> {
         self.compute_rankings()
             .into_iter()
@@ -817,7 +817,7 @@ impl NftStakingContract {
             .collect()
     }
 
-    /// Позиция конкретного аккаунта в общем рейтинге (None, если у него нет активных NFT).
+    /// Position of a given account in the overall ranking (None if it has no active NFTs).
     pub fn get_my_rank(&self, account_id: AccountId) -> Option<MyRankEntry> {
         let rankings = self.compute_rankings();
         rankings
@@ -834,13 +834,13 @@ impl NftStakingContract {
             })
     }
 
-    /// Предпросмотр награды для СТЕЙКА НЕСКОЛЬКИХ NFT ЗА РАЗ (батч).
-    /// current_active_count — сколько NFT уже активно застейкано у этого аккаунта
-    /// (позиции считаются от current_active_count+1 до current_active_count+add_count).
-    /// add_count — сколько NFT сейчас добавляется.
-    /// Возвращает СУММУ наград по всем добавляемым NFT, корректно учитывая переход
-    /// через границы тиров (например, если у стейкера уже 8 NFT и он добавляет 5 —
-    /// 2 из них попадут в тир 1-10, а 3 — в тир 11-20).
+    /// Reward preview for STAKING SEVERAL NFTs AT ONCE (a batch).
+    /// current_active_count - how many NFTs this account already has actively staked
+    /// (positions run from current_active_count+1 to current_active_count+add_count).
+    /// add_count - how many NFTs are being added now.
+    /// Returns the SUM of rewards over all added NFTs, correctly handling a crossing of
+    /// tier boundaries (e.g. if a staker already holds 8 NFTs and adds 5, two of them land
+    /// in tier 1-10 and three in tier 11-20).
     pub fn preview_reward(&self, period_days: u8, current_active_count: u32, add_count: u32) -> U128 {
         require!(
             period_days == 7 || period_days == 14 || period_days == 30,
@@ -855,15 +855,15 @@ impl NftStakingContract {
         U128(total)
     }
 
-    /// APR (bps) для конкретной позиции NFT у стейкера (1-й, 2-й, ... N-й).
-    /// Одинаков для всех периодов (7/14/30 дней) — награда масштабируется по
-    /// сроку внутри calc_reward, а не через отдельный APR на период.
+    /// APR (bps) for a specific NFT position of a staker (1st, 2nd, ... Nth).
+    /// The same for every period (7/14/30 days) - the reward scales with the term inside
+    /// calc_reward rather than through a separate APR per period.
     pub fn get_apr_bps(&self, position: u32) -> u64 {
         require!(position > 0, "get_apr_bps: position must be > 0");
         Self::apr_bps_for_position(position)
     }
 
-    // ── Internal ──────────────────────────────────────────────────────────────
+    // ── Internal ───────────────────────────────────────────────────────────
 
     fn assert_owner(&self) {
         require!(
@@ -872,12 +872,12 @@ impl NftStakingContract {
         );
     }
 
-    /// F-2: усиленная проверка для методов, распоряжающихся средствами и состоянием.
-    /// Требование ровно 1 yoctoNEAR заставляет подписывать вызов full-access ключом:
-    /// function-call ключи (те, что выдаются фронтендам и ботам) прикрепить депозит
-    /// не могут. На момент правки на контрактном аккаунте только full-access ключи,
-    /// то есть активного вектора нет — это защита на будущее, если такой ключ появится.
-    /// Намеренно НЕ применяется к deposit_rewards: он принимает произвольный депозит.
+    /// F-2: a stronger check for the methods that dispose of funds and state.
+    /// Requiring exactly 1 yoctoNEAR forces the call to be signed with a full-access key:
+    /// function-call keys (the kind issued to frontends and bots) cannot attach a deposit.
+    /// At the time of this fix the contract account holds only full-access keys, so there
+    /// is no live vector - this guards the future, should such a key ever be added.
+    /// Deliberately NOT applied to deposit_rewards: that one accepts an arbitrary deposit.
     fn assert_owner_one_yocto(&self) {
         require!(
             env::attached_deposit().as_yoctonear() == 1,
@@ -886,9 +886,9 @@ impl NftStakingContract {
         self.assert_owner();
     }
 
-    /// Строгая версия — только для write-путей, где period_days уже провалидирован
-    /// (принимаются исключительно 7/14/30). Паника здесь означает баг в коде, а не
-    /// плохие данные.
+    /// Strict version - only for write paths where period_days is already validated
+    /// (exclusively 7/14/30 are accepted). A panic here means a bug in the code, not bad
+    /// data.
     fn period_sec(days: u8) -> u64 {
         match days {
             7  => PERIOD_7_DAYS,
@@ -898,13 +898,13 @@ impl NftStakingContract {
         }
     }
 
-    /// F-5: мягкая версия для чтения и для unstake.
-    /// Прежде period_sec паниковал везде, и одна запись с нестандартным period_days
-    /// (легаси из ранних версий) роняла get_stake, get_stakes_for_account,
-    /// get_matured_stakes_count и get_contract_stats сразу для ВСЕХ пользователей.
-    /// Хуже того, тот же вызов стоял в unstake — то есть владелец такой записи
-    /// вообще не мог забрать свой NFT. Возврат 0 означает «срок уже истёк»:
-    /// для битой записи это самый безопасный исход — пользователь получает NFT назад.
+    /// F-5: lenient version, for reads and for unstake.
+    /// period_sec used to panic everywhere, and a single record with a non-standard
+    /// period_days (legacy from early versions) took down get_stake,
+    /// get_stakes_for_account, get_matured_stakes_count and get_contract_stats for ALL
+    /// users at once. Worse, the same call sat inside unstake - so the owner of such a
+    /// record could not retrieve their NFT at all. Returning 0 means "the term has already
+    /// elapsed": for a broken record that is the safest outcome - the user gets the NFT back.
     fn period_sec_lenient(days: u8) -> u64 {
         match days {
             7  => PERIOD_7_DAYS,
@@ -925,7 +925,7 @@ impl NftStakingContract {
             .unwrap_or(0)
     }
 
-    /// Возвращает тир APR (bps) по позиции NFT у стейкера (1-й, 2-й, ... N-й).
+    /// Returns the APR tier (bps) for a staker's NFT position (1st, 2nd, ... Nth).
     fn apr_bps_for_position(position: u32) -> u64 {
         match position {
             1..=10  => TIER_APR_BPS[0],
@@ -937,11 +937,11 @@ impl NftStakingContract {
         }
     }
 
-    /// Награда за ОДИН конкретный NFT на данной позиции у стейкера.
-    /// ФИКС БАГА: раньше здесь домножали на nft_count (позицию), из-за чего
-    /// награда за один NFT росла пропорционально порядковому номеру вместо
-    /// того, чтобы просто определять тир ставки. Теперь множитель — всегда 1
-    /// (это же один-единственный NFT), тир только выбирает APR.
+    /// Reward for ONE specific NFT at the given position of a staker.
+    /// BUG FIX: this used to multiply by nft_count (the position), so the reward for a
+    /// single NFT grew in proportion to its ordinal number instead of merely selecting
+    /// the rate tier. The multiplier is now always 1 (it is one single NFT), and the tier
+    /// only picks the APR.
     fn calc_reward(&self, period_days: u8, position: u32) -> u128 {
         let apr  = Self::apr_bps_for_position(position) as u128;
         let days = period_days as u128;
