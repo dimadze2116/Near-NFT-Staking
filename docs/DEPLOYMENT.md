@@ -53,14 +53,21 @@ Administrative operations are run manually, by design — see [`SECURITY.md`](SE
 # Top up the reward pool (opens staking if the pool was empty)
 near contract call-function as-transaction legion-staking.near deposit_rewards \
   json-args '{}' prepaid-gas '30 Tgas' attached-deposit '10 NEAR' \
+  sign-as legion-staking.near \
   network-config mainnet sign-with-keychain send
 
 # Withdraw from the pool — amount in yoctoNEAR, requires 1 yoctoNEAR
 near contract call-function as-transaction legion-staking.near withdraw_rewards \
   json-args '{"amount": "1000000000000000000000000"}' \
   prepaid-gas '50 Tgas' attached-deposit '1 yoctoNEAR' \
+  sign-as legion-staking.near \
   network-config mainnet sign-with-keychain send
 ```
+
+`sign-as` is mandatory on `as-transaction` and easy to miss: without it near-cli-rs
+answers `unexpected argument 'network-config' found`, which reads like a syntax
+error in the network options rather than a missing signer. Here the signer is the
+contract account itself, because that account is its own owner.
 
 Note the difference between `deposit_rewards` and a plain transfer to the contract account. The former increases `reward_pool` and re-opens staking; the latter only tops up the balance, which is what you want when covering existing obligations without accepting new positions.
 

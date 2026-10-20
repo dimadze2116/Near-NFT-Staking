@@ -558,7 +558,7 @@ bot.command('deposittopup', async (ctx) => {
     `Выполнить на своей машине:\n\n` +
     `near contract call-function as-transaction ${STAKING_CONTRACT} deposit_rewards ` +
     `json-args '{}' prepaid-gas '30 Tgas' attached-deposit '${amount} NEAR' ` +
-    `network-config mainnet sign-with-keychain send\n\n` +
+    `sign-as ${STAKING_CONTRACT} network-config mainnet sign-with-keychain send\n\n` +
     `⚠️ Пополнение пула снова открывает приём новых стейков.`
   );
 });
@@ -576,7 +576,7 @@ bot.command('withdrawpool', async (ctx) => {
     `Выполнить на своей машине:\n\n` +
     `near contract call-function as-transaction ${STAKING_CONTRACT} withdraw_rewards ` +
     `json-args '{"amount": "${yocto}"}' prepaid-gas '50 Tgas' attached-deposit '1 yoctoNEAR' ` +
-    `network-config mainnet sign-with-keychain send\n\n` +
+    `sign-as ${STAKING_CONTRACT} network-config mainnet sign-with-keychain send\n\n` +
     `Выводится только свободный пул — зарезервированные награды не затрагиваются.`
   );
 });
