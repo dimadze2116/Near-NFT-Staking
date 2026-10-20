@@ -43,6 +43,7 @@ jobs:
           workspaces: |
             contracts/mock-nft
             contracts/staking
+            contracts/marketplace
             contracts/integration-tests
 
       # Only cargo-near produces a working binary: since near-sdk 5.27 the
@@ -66,6 +67,10 @@ jobs:
 
       - name: Build staking contract
         working-directory: contracts/staking
+        run: cargo near build non-reproducible-wasm --no-abi
+
+      - name: Build marketplace contract
+        working-directory: contracts/marketplace
         run: cargo near build non-reproducible-wasm --no-abi
 
       - name: Integration tests

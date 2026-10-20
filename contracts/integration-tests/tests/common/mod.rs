@@ -26,6 +26,7 @@ use near_workspaces::network::Sandbox;
 
 /// Default artefact locations, relative to this crate's root (cargo test's cwd).
 const STAKING_WASM: &str = "../staking/target/near/nft_staking.wasm";
+const MARKET_WASM: &str = "../marketplace/target/near/nft_marketplace.wasm";
 const MOCK_NFT_WASM: &str = "../mock-nft/target/near/mock_nft.wasm";
 
 pub struct Ctx {
@@ -36,7 +37,12 @@ pub struct Ctx {
     pub nft: Contract,
     /// The staking contract. Its owner is itself, as on mainnet.
     pub staking: Contract,
+    /// The marketplace contract, likewise its own owner.
+    pub market: Contract,
+    /// A holder: mints land here, and this is the seller in marketplace tests.
     pub alice: Account,
+    /// A second account, the buyer.
+    pub bob: Account,
 }
 
 fn read_wasm(env_key: &str, default_path: &str) -> anyhow::Result<Vec<u8>> {
@@ -95,11 +101,20 @@ pub async fn setup() -> anyhow::Result<Ctx> {
         .await?
         .into_result()?;
 
-    let alice = worker
-        .dev_create_account()
+    let market = worker
+        .dev_deploy(&read_wasm("MARKET_WASM", MARKET_WASM)?)
         .await?;
+    market
+        .call("new")
+        .args_json(serde_json::json!({ "owner_id": market.id() }))
+        .transact()
+        .await?
+        .into_result()?;
 
-    Ok(Ctx { worker, nft, staking, alice })
+    let alice = worker.dev_create_account().await?;
+    let bob = worker.dev_create_account().await?;
+
+    Ok(Ctx { worker, nft, staking, market, alice, bob })
 }
 
 impl Ctx {
@@ -206,6 +221,43 @@ impl Ctx {
     ///
     /// Matching owner and token_id *and* requiring the value to end exactly
     /// where that layout says it should makes the identification unambiguous.
+    /// Lists `token_id` for `price` through nft_transfer_call, the way the
+    /// Mini App does it: the price travels in `msg`, in yoctoNEAR.
+    pub async fn list(&self, token_id: &str, price: NearToken) -> anyhow::Result<()> {
+        self.alice
+            .call(self.nft.id(), "nft_transfer_call")
+            .args_json(serde_json::json!({
+                "receiver_id": self.market.id(),
+                "token_id": token_id,
+                "msg": price.as_yoctonear().to_string(),
+            }))
+            .deposit(NearToken::from_yoctonear(1))
+            .gas(near_workspaces::types::Gas::from_tgas(300))
+            .transact()
+            .await?
+            .into_result()?;
+        Ok(())
+    }
+
+    pub async fn active_listings(&self) -> anyhow::Result<u128> {
+        let n: String = self
+            .market
+            .view("get_active_listings_count")
+            .args_json(serde_json::json!({}))
+            .await?
+            .json()?;
+        Ok(n.parse()?)
+    }
+
+    pub async fn listing(&self, token_id: &str) -> anyhow::Result<serde_json::Value> {
+        Ok(self
+            .market
+            .view("get_listing")
+            .args_json(serde_json::json!({ "token_id": token_id }))
+            .await?
+            .json()?)
+    }
+
     pub async fn backdate_stake(&self, token_id: &str, seconds: u64) -> anyhow::Result<()> {
         let owner = self.alice.id().to_string();
         let state = self.staking.view_state().await?;
