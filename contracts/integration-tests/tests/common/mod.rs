@@ -24,6 +24,10 @@ const STAKING_WASM: &str = "../staking/target/near/nft_staking.wasm";
 const MOCK_NFT_WASM: &str = "../mock-nft/target/near/mock_nft.wasm";
 
 pub struct Ctx {
+    /// Kept for tests that need to rewrite state directly — patching
+    /// `staked_at` is how a matured stake is produced without waiting out
+    /// 604,800 blocks.
+    #[allow(dead_code)]
     pub worker: Worker<Sandbox>,
     /// The collection, deployed at nearlegion.nfts.tg
     pub nft: Contract,

@@ -28,6 +28,8 @@ jobs:
     # Pinned rather than ubuntu-latest, which is mid-migration to Ubuntu 26.
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    permissions:
+      contents: write   # only to post the failure output as a commit comment
 
     steps:
       - uses: actions/checkout@v4
@@ -68,4 +70,25 @@ jobs:
 
       - name: Integration tests
         working-directory: contracts/integration-tests
-        run: cargo test -- --nocapture
+        run: |
+          set -o pipefail
+          cargo test -- --nocapture 2>&1 | tee /tmp/test-output.txt
+
+      # Run logs are only served through signed storage URLs, which is awkward
+      # to read from anywhere but a browser. On failure the tail of the output
+      # is posted as a commit comment instead, where the API can reach it.
+      - name: Post failure output as a commit comment
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "### \`cargo test\` failed on \`${GITHUB_SHA:0:8}\`"
+            echo
+            echo '```'
+            tail -c 55000 /tmp/test-output.txt || echo "(no output captured)"
+            echo '```'
+          } > /tmp/comment.md
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/comments" \
+            -F body=@/tmp/comment.md
