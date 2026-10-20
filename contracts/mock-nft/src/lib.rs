@@ -12,8 +12,8 @@
 use near_sdk::json_types::U128;
 use near_sdk::store::IterableMap;
 use near_sdk::{
-    env, ext_contract, near, require, AccountId, Gas, NearToken, PanicOnDefault, Promise,
-    PromiseError, PromiseOrValue,
+    env, ext_contract, near, require, AccountId, Gas, NearToken, PanicOnDefault, PromiseError,
+    PromiseOrValue,
 };
 
 /// Budget for the receiver's nft_on_transfer. Generous on purpose: the staking
@@ -48,6 +48,12 @@ trait SelfExt {
 #[derive(PanicOnDefault)]
 pub struct MockNft {
     owners: IterableMap<String, AccountId>,
+    /// When set, `nft_transfer` panics. A real collection can fail a transfer
+    /// for reasons the caller cannot produce on demand — a deleted recipient,
+    /// for one — and the contracts under test are supposed to refund and
+    /// restore state when that happens. Without a way to make the failure
+    /// happen, that path is untestable.
+    fail_transfers: bool,
 }
 
 #[near]
@@ -57,10 +63,16 @@ impl MockNft {
         require!(!env::state_exists(), "Already initialized");
         Self {
             owners: IterableMap::new(b"o".to_vec()),
+            fail_transfers: false,
         }
     }
 
     // ── Test helpers (not part of NEP-171) ──────────────────────────────────
+
+    /// Makes every subsequent `nft_transfer` fail. Test-only.
+    pub fn set_fail_transfers(&mut self, fail: bool) {
+        self.fail_transfers = fail;
+    }
 
     pub fn nft_mint(&mut self, token_id: String, receiver_id: AccountId) {
         require!(
@@ -110,6 +122,7 @@ impl MockNft {
             env::attached_deposit() == NearToken::from_yoctonear(1),
             "nft_transfer: requires attached deposit of exactly 1 yoctoNEAR"
         );
+        require!(!self.fail_transfers, "nft_transfer: simulated failure");
         let owner = self
             .owners
             .get(&token_id)

@@ -28,6 +28,9 @@ use near_workspaces::network::Sandbox;
 const STAKING_WASM: &str = "../staking/target/near/nft_staking.wasm";
 const MARKET_WASM: &str = "../marketplace/target/near/nft_marketplace.wasm";
 const MOCK_NFT_WASM: &str = "../mock-nft/target/near/mock_nft.wasm";
+/// Bytecode taken off mainnet with `near contract download-wasm`, kept so the
+/// parity test can compare against the build that was actually running.
+const LEGACY_STAKING_WASM: &str = "tests/fixtures/legion-staking-2026-10-20.wasm";
 
 pub struct Ctx {
     /// Used by tests that rewrite state directly — patching `staked_at` is how
@@ -135,7 +138,15 @@ impl Ctx {
     /// Tops the reward pool up from the contract's own balance, the way it is
     /// done on mainnet: the contract is its own owner, so it signs for itself.
     pub async fn deposit_rewards(&self, amount: NearToken) -> anyhow::Result<()> {
-        self.staking
+        self.deposit_rewards_on(&self.staking, amount).await
+    }
+
+    pub async fn deposit_rewards_on(
+        &self,
+        staking: &Contract,
+        amount: NearToken,
+    ) -> anyhow::Result<()> {
+        staking
             .call("deposit_rewards")
             .deposit(amount)
             .gas(near_workspaces::types::Gas::from_tgas(30))
@@ -162,15 +173,51 @@ impl Ctx {
     /// Stakes `token_id` for `period_days` through nft_transfer_call, the way
     /// the Mini App does it.
     pub async fn stake(&self, token_id: &str, period_days: u8) -> anyhow::Result<()> {
+        self.stake_on(&self.staking, token_id, period_days).await
+    }
+
+    /// Same, against a specific staking contract — the parity test runs two.
+    pub async fn stake_on(
+        &self,
+        staking: &Contract,
+        token_id: &str,
+        period_days: u8,
+    ) -> anyhow::Result<()> {
         self.alice
             .call(self.nft.id(), "nft_transfer_call")
             .args_json(serde_json::json!({
-                "receiver_id": self.staking.id(),
+                "receiver_id": staking.id(),
                 "token_id": token_id,
                 "msg": period_days.to_string(),
             }))
             .deposit(NearToken::from_yoctonear(1))
             .gas(near_workspaces::types::Gas::from_tgas(300))
+            .transact()
+            .await?
+            .into_result()?;
+        Ok(())
+    }
+
+    /// Deploys a second staking contract from the mainnet bytecode fixture,
+    /// initialised the same way the live one is: owned by itself.
+    pub async fn deploy_legacy_staking(&self) -> anyhow::Result<Contract> {
+        let contract = self
+            .worker
+            .dev_deploy(&read_wasm("LEGACY_STAKING_WASM", LEGACY_STAKING_WASM)?)
+            .await?;
+        contract
+            .call("new")
+            .args_json(serde_json::json!({ "owner_id": contract.id() }))
+            .transact()
+            .await?
+            .into_result()?;
+        Ok(contract)
+    }
+
+    pub async fn set_nft_transfers_failing(&self, fail: bool) -> anyhow::Result<()> {
+        self.nft
+            .call("set_fail_transfers")
+            .args_json(serde_json::json!({ "fail": fail }))
             .transact()
             .await?
             .into_result()?;
@@ -259,8 +306,17 @@ impl Ctx {
     }
 
     pub async fn backdate_stake(&self, token_id: &str, seconds: u64) -> anyhow::Result<()> {
+        self.backdate_stake_on(&self.staking, token_id, seconds).await
+    }
+
+    pub async fn backdate_stake_on(
+        &self,
+        staking: &Contract,
+        token_id: &str,
+        seconds: u64,
+    ) -> anyhow::Result<()> {
         let owner = self.alice.id().to_string();
-        let state = self.staking.view_state().await?;
+        let state = staking.view_state().await?;
 
         let mut seen: Vec<String> = Vec::new();
         for (key, value) in &state {
@@ -271,7 +327,7 @@ impl Ctx {
                     let moved = current.saturating_sub(seconds);
                     patched[offset..offset + 8].copy_from_slice(&moved.to_le_bytes());
                     self.worker
-                        .patch_state(self.staking.id(), key, &patched)
+                        .patch_state(staking.id(), key, &patched)
                         .await?;
                     return Ok(());
                 }
