@@ -50,18 +50,21 @@ fn read_wasm(env_key: &str, default_path: &str) -> anyhow::Result<Vec<u8>> {
 pub async fn setup() -> anyhow::Result<Ctx> {
     let worker = near_workspaces::sandbox().await?;
 
-    // nearlegion.nfts.tg, one level at a time.
+    // nearlegion.nfts.tg, one level at a time. The balances shrink down the
+    // chain on purpose: a new top-level account is funded with 100 NEAR, so
+    // handing all of it to the child leaves nothing for the gas of that very
+    // transaction and fails with NotEnoughBalance.
     let sk = SecretKey::from_random(KeyType::ED25519);
     let tg = worker.create_tla("tg".parse()?, sk).await?.into_result()?;
     let nfts = tg
         .create_subaccount("nfts")
-        .initial_balance(NearToken::from_near(100))
+        .initial_balance(NearToken::from_near(50))
         .transact()
         .await?
         .into_result()?;
     let legion = nfts
         .create_subaccount("nearlegion")
-        .initial_balance(NearToken::from_near(50))
+        .initial_balance(NearToken::from_near(25))
         .transact()
         .await?
         .into_result()?;
