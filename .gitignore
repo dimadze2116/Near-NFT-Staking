@@ -23,6 +23,9 @@ dist/
 build/
 target/
 *.wasm
+# ...except the mainnet bytecode kept as a test fixture: the parity test needs
+# the exact binary that was running, and the chain only stores the current one.
+!contracts/integration-tests/tests/fixtures/*.wasm
 .vite/
 
 # ── Infrastructure-specific ─────────────────────────────────────────────────

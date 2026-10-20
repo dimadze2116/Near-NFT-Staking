@@ -1,0 +1,23 @@
+[package]
+name = "mock-nft"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# A minimal NEP-171 collection used only by the integration tests. It is never
+# deployed anywhere but a sandbox: the real collection (nearlegion.nfts.tg) is a
+# third-party contract this project does not own.
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = { version = "~5.29.1", features = ["legacy"] }
+
+[profile.release]
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true

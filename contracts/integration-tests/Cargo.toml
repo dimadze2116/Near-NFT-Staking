@@ -1,0 +1,24 @@
+[package]
+name = "legion-integration-tests"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Tests for both contracts, kept in a package of their own on purpose.
+#
+# There is deliberately no near-sdk dependency here. The tests talk to the
+# contracts the way any other client does — JSON over RPC against a sandbox
+# node — and load the compiled .wasm from disk, so they never need the
+# contracts' Rust types. Putting them inside the contract crates instead would
+# mean `cargo test` compiling the contract for the host target, which near-sdk
+# refuses unless it is handed a `unit-testing` feature; feeding test-only
+# features into the crate that produces the deployed binary is exactly what the
+# parity test exists to rule out.
+
+[dependencies]
+
+[dev-dependencies]
+near-workspaces = "0.23"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+anyhow = "1"
+serde_json = "1"

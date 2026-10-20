@@ -1,5 +1,7 @@
 # NEAR Legion — NFT staking and marketplace inside Telegram
 
+[![contracts](https://github.com/dimadze2116/Near-NFT-Staking/actions/workflows/contracts.yml/badge.svg)](https://github.com/dimadze2116/Near-NFT-Staking/actions/workflows/contracts.yml)
+
 An NFT that does three things after mint: earns a fixed, pre-funded reward while
 staked, grants access to a private Telegram channel while held, and can be traded
 on an escrow marketplace — all from a Telegram Mini App, with no browser

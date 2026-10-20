@@ -1,0 +1,58 @@
+# Integration tests for both contracts.
+#
+# They run here rather than on a developer's machine because near-workspaces
+# starts a real nearcore sandbox, and that binary is published only for
+# linux-x86_64, linux-aarch64 and darwin-arm64. On Windows it cannot run at all,
+# so CI is the primary runner for this suite, not a convenience.
+
+name: contracts
+
+on:
+  push:
+    paths:
+      - 'contracts/**'
+      - '.github/workflows/contracts.yml'
+  pull_request:
+    paths:
+      - 'contracts/**'
+      - '.github/workflows/contracts.yml'
+  workflow_dispatch:
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            contracts/mock-nft
+            contracts/staking
+            contracts/integration-tests
+
+      # Only cargo-near produces a working binary: since near-sdk 5.27 the
+      # --cfg near flag is required, and a plain cargo build compiles, deploys,
+      # and then traps at new().
+      - name: Install cargo-near
+        run: |
+          command -v cargo-near >/dev/null || cargo install cargo-near --locked
+          cargo near --version
+
+      - name: Build mock collection
+        working-directory: contracts/mock-nft
+        run: cargo near build non-reproducible-wasm --no-abi
+
+      - name: Build staking contract
+        working-directory: contracts/staking
+        run: cargo near build non-reproducible-wasm --no-abi
+
+      - name: Integration tests
+        working-directory: contracts/integration-tests
+        run: cargo test -- --nocapture
