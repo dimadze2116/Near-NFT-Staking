@@ -166,6 +166,26 @@ impl Ctx {
         Ok(self.alice.view_account().await?.balance.as_yoctonear())
     }
 
+    pub async fn staking_balance(&self) -> anyhow::Result<u128> {
+        Ok(self
+            .staking
+            .as_account()
+            .view_account()
+            .await?
+            .balance
+            .as_yoctonear())
+    }
+
+    pub async fn reward_pool(&self) -> anyhow::Result<u128> {
+        let pool: String = self
+            .staking
+            .view("get_reward_pool")
+            .args_json(serde_json::json!({}))
+            .await?
+            .json()?;
+        Ok(pool.parse()?)
+    }
+
     /// Moves a stake's `staked_at` back by `seconds`, which is how a matured
     /// position is produced in a test.
     ///

@@ -47,7 +47,12 @@ async fn stake_matures_then_unstake_returns_nft_and_reward() -> anyhow::Result<(
     let reward: u128 = stake["reward_near"].as_str().unwrap().parse()?;
     assert!(reward > 0, "a stake must carry a reserved reward");
 
-    let before = ctx.alice_balance().await?;
+    // The payout is measured on the contract's side, not the staker's. A staker
+    // who attaches 300 TGas to unstake can easily burn more in gas than a
+    // 7-day first-tier reward is worth, so "did Alice's balance grow" says
+    // nothing about whether the reward was paid.
+    let pool_before = ctx.reward_pool().await?;
+    let contract_before = ctx.staking_balance().await?;
 
     ctx.alice
         .call(ctx.staking.id(), "unstake")
@@ -64,12 +69,19 @@ async fn stake_matures_then_unstake_returns_nft_and_reward() -> anyhow::Result<(
         "the NFT should be back with its owner"
     );
 
-    // The reward is ~0.046 NEAR for a 7-day stake in the first tier, orders of
-    // magnitude more than the gas this costs, so the balance must have grown.
-    let after = ctx.alice_balance().await?;
+    let contract_after = ctx.staking_balance().await?;
     assert!(
-        after > before,
-        "balance did not grow: before={before} after={after} reward={reward}"
+        contract_before - contract_after >= reward,
+        "the contract did not part with the reward: before={contract_before} \
+         after={contract_after} reward={reward}"
+    );
+
+    // The reward was taken out of the pool when the stake was created, so
+    // paying it out must not touch the pool a second time.
+    let pool_after = ctx.reward_pool().await?;
+    assert_eq!(
+        pool_before, pool_after,
+        "the pool changed during payout, so the reward was charged twice"
     );
 
     let stake: serde_json::Value = ctx
