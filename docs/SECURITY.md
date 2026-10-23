@@ -65,7 +65,7 @@ of the things scheduled for the hackathon window, and the order it follows is in
 The counters therefore live under their own storage keys instead:
 
 - While the keys are absent the contract **scans, exactly as before**. A
-  deployment changes nothing observable — `tests/parity.rs` deploys the previous
+  deployment changes nothing observable — `contracts/integration-tests/tests/parity.rs` deploys the previous
   mainnet bytecode beside the new build and requires 35 answers to match, with
   the counters left uninitialised, which is precisely the state a redeploy
   lands in.
