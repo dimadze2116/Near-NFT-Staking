@@ -80,8 +80,21 @@ export function connectWallet() {
   return new Promise((resolve, reject) => {
     (async () => {
       try {
-        const { NearConnector } = await import("https://esm.sh/@hot-labs/near-connect@latest");
-        const { Near, fromHotConnect } = await import("https://esm.sh/near-kit@latest");
+        // Versions are pinned deliberately. These imports resolve at runtime in
+        // the browser, so an unpinned specifier meant every user loaded whatever
+        // had been published by then - a breaking release in either library
+        // would take wallet connection down, and with it every flow in the app.
+        //
+        // These are the versions the app was last verified on. Raising them is
+        // a deliberate act: bump, open the bot, connect a wallet, sign one
+        // transaction.
+        //
+        // Note this pins the libraries, not the dependency on esm.sh itself.
+        // Bundling them instead would not remove that dependency either -
+        // near-connect fetches its wallet manifest from cdn.jsdelivr.net at
+        // runtime regardless.
+        const { NearConnector } = await import("https://esm.sh/@hot-labs/near-connect@0.11.4");
+        const { Near, fromHotConnect } = await import("https://esm.sh/near-kit@0.20.2");
         const connector = new NearConnector({ network: "mainnet" });
         connector.on("wallet:signIn", async (data) => {
           const near = new Near({
