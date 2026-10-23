@@ -16,11 +16,22 @@ cargo near build non-reproducible-wasm --no-abi
 ## Deploying over existing state
 
 ```bash
+# from contracts/staking
 near contract deploy legion-staking.near \
   use-file target/near/nft_staking.wasm \
   without-init-call \
   network-config mainnet sign-with-keychain send
+
+# from contracts/marketplace
+near contract deploy legion-marketplace.near \
+  use-file target/near/nft_marketplace.wasm \
+  without-init-call \
+  network-config mainnet sign-with-keychain send
 ```
+
+Each crate is standalone, so each builds into its own `target/` and the deploy
+runs from that crate's directory. The wasm is named after the crate with the
+hyphen replaced by an underscore — `nft-staking` produces `nft_staking.wasm`.
 
 `without-init-call` is mandatory on redeploy — the contract is already initialised, and `new()` must not run again.
 
