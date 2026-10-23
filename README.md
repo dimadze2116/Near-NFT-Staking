@@ -336,6 +336,32 @@ receives the NFT.
 
 ---
 
+## Adding another collection
+
+Both contracts bind to one collection through a single constant:
+
+```rust
+// contracts/staking/src/lib.rs:8
+const NFT_CONTRACT_ID: &str = "nearlegion.nfts.tg";
+```
+
+Nothing else depends on which collection it is — not the reward math, not the
+escrow path, not the gas budget. Apart from its definition the constant appears
+three times in the staking contract and four in the marketplace, and nowhere
+else: the cross-contract calls that move an NFT, and the check that the caller
+of `nft_on_transfer` really is the collection. Stake and listing records key on
+`token_id` alone.
+
+Supporting a second collection is therefore a second deployment, not a rewrite:
+change the constant, rebuild, deploy to a new account, point the bot at it.
+
+The same fact sets the limit. One instance cannot serve two collections at
+once, because `token_id` is not namespaced and tokens from different
+collections would collide. Making a single instance multi-collection needs a
+state migration, and that is not done.
+
+---
+
 ## Known limitations
 
 - **Cart capped at 4 items.** A gas ceiling, not a product decision: measured on
@@ -345,10 +371,12 @@ receives the NFT.
   signing rather than after.
 - **`MAX_ACTIVE_STAKES = 300`** globally, which keeps the reward budget provably
   bounded.
-- **No owner transfer yet.** The field is reserved in state, so adding the
-  methods later needs no migration, but the mechanism is not there. It is also
-  not obviously wanted: the owner is the contract account itself, and pointing
-  it at a personal account would widen what a compromise of that account costs.
+- **No owner transfer.** Not implemented, and no field is reserved for it: the
+  staking contract's state holds `owner_id`, the two stake maps and
+  `reward_pool`, and nothing else. Adding it later means either a state
+  migration or the storage-key approach the counters already use. It is also not
+  obviously wanted: the owner is the contract account itself, and pointing it at
+  a personal account would widen what a compromise of that account costs.
 - **No formal third-party audit.** At current volumes that would be premature;
   it is the natural next step as the project scales.
 

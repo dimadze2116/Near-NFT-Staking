@@ -6,7 +6,7 @@ Both contracts hold third-party assets in escrow — staked NFTs and listed NFTs
 
 A line-by-line review of both contracts covering access control, escrow integrity, callback handling, protection against double-claims and state reuse, gas budgeting, and reward arithmetic with respect to overflow.
 
-It produced **15 findings**. Fourteen are fixed and redeployed to mainnet; the one remaining requires a state migration and is scheduled for when the staking contract clears of active positions.
+It produced **15 findings**. Fourteen are fixed and redeployed to mainnet. The fifteenth is fixed in this tree and goes to mainnet during the hackathon window. It was closed without a state migration; how, and why, is described below.
 
 ### The most serious finding
 
