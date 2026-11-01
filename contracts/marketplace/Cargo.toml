@@ -7,7 +7,13 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-near-sdk = { version = "5.1.0", features = ["legacy"] }
+# Pinned deliberately. These contracts are deployed to mainnet, and an open
+# "5.1.0" range resolves to whatever 5.x is newest at build time: near-sdk 5.30
+# targets a different protocol version than the 5.29.1 the test suite runs
+# against, so the range would deploy a binary no test has touched. Cargo.lock is
+# committed for the same reason — the lock, not the range, is what makes a build
+# reproducible.
+near-sdk = { version = "~5.29.1", features = ["legacy"] }
 borsh = "1"
 serde = { version = "1", features = ["derive"] }
 
