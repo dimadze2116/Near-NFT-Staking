@@ -18,6 +18,50 @@ Live on NEAR mainnet with real holders and real assets.
 
 ---
 
+## What the hackathon window added
+
+This project did not start at the hackathon. The Mini App, both contracts and
+the bot have been live on NEAR mainnet since June 2026, developed in a private
+repository.
+
+Commit [`48acd04`](https://github.com/dimadze2116/Near-NFT-Staking/commit/48acd04),
+tagged `pre-hackathon`, is the import of that existing product into this public
+repository on 19 October 2026. It is one commit, not one day of work —
+everything in it predates the hackathon and is baseline.
+
+What the window added is the diff:
+[`pre-hackathon...main`](https://github.com/dimadze2116/Near-NFT-Staking/compare/pre-hackathon...main)
+
+- **An integration test suite from zero.** There were none before. 18 tests run
+  against a sandbox node, among them a parity test that deploys the previous
+  mainnet bytecode beside the new build and requires 35 answers to match. CI
+  runs them on every push to `contracts/`.
+- **The last open security finding closed and deployed.** Creating a stake
+  scanned the whole stake map twice, both times in the write path, so the cost
+  of staking grew with every record ever created. Replaced with counters under
+  their own storage keys — which needs no state migration, and whose way back
+  is one call. Deployed to mainnet on 1 November 2026.
+- **A pause for both contracts.** It refuses only the way in: `unstake` and
+  `cancel_listing` are not pausable, because a pause that could trap someone
+  else's NFT would not be a safeguard.
+- **Dependency versions pinned.** The marketplace had no committed lockfile and
+  resolved `near-sdk` afresh on every build; it had already drifted a minor
+  version away from what the tests cover. Both contracts are now pinned, and
+  their dependency trees are identical.
+- **Wallet libraries pinned** in the Mini App, which previously resolved the
+  newest version at runtime.
+- **This README rewritten for judges**, with seven read-only mainnet calls
+  anyone can run without a wallet, and [`ARCHITECTURE.md`](docs/ARCHITECTURE.md),
+  [`SECURITY.md`](docs/SECURITY.md) and [`DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+  written from scratch.
+- **All code comments translated to English**, 262 in the contracts and 75 in
+  the bot. The bot's user-facing locale stays bilingual.
+
+No libraries or templates were added during the window beyond the pinned
+versions above. The contracts depend only on `near-sdk`, `borsh` and `serde`.
+
+---
+
 ## The problem
 
 Two problems, one product.
