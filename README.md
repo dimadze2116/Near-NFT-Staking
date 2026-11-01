@@ -319,8 +319,8 @@ state-changing administrative operation is performed manually through
 yoctoNEAR, and a human signs it. `bot/src/near.ts` is read-only by
 construction — the key-handling code was deleted rather than guarded.
 
-**Internal review: 15 findings, 14 fixed and live; the fifteenth is fixed in
-this tree and goes to mainnet during the hackathon window.** The most serious one:
+**Internal review: 15 findings, all 15 fixed and live on mainnet.** The most
+serious one:
 `nft_on_transfer` derived stake ownership from `sender_id`, which under NEP-171
 differs from the owner whenever a NEP-178 approval is used — an approved account
 could stake someone else's NFT and claim it as its own. Ownership now comes from

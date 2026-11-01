@@ -6,7 +6,7 @@ Both contracts hold third-party assets in escrow — staked NFTs and listed NFTs
 
 A line-by-line review of both contracts covering access control, escrow integrity, callback handling, protection against double-claims and state reuse, gas budgeting, and reward arithmetic with respect to overflow.
 
-It produced **15 findings**. Fourteen are fixed and redeployed to mainnet. The fifteenth is fixed in this tree and goes to mainnet during the hackathon window. It was closed without a state migration; how, and why, is described below.
+It produced **15 findings**. All fifteen are fixed and live on mainnet. The last of them was closed without a state migration; how, and why, is described below.
 
 ### The most serious finding
 
@@ -58,9 +58,12 @@ cannot read the old bytes until a migration has run. On a contract holding other
 people's NFTs that is the most dangerous operation available: it is all-or-
 nothing, and there is no intermediate state to stop and think in.
 
-**Status:** this is in the tree and not yet on mainnet. The deployment is one
-of the things scheduled for the hackathon window, and the order it follows is in
-[`DEPLOYMENT.md`](DEPLOYMENT.md).
+**Status:** deployed to mainnet on 1 November 2026, in the order set out in
+[`DEPLOYMENT.md`](DEPLOYMENT.md). Immediately after the redeploy `audit_counters`
+reported `ready: false` — the contract still scanning, exactly as the parity test
+requires. After `init_counters` it reported `ready: true` with
+`active_counter` 2 against `active_real` 2, and `claimed_counter` 73 against
+`claimed_real` 73. Both pairs can be re-checked by anyone with a read-only call.
 
 The counters therefore live under their own storage keys instead:
 
