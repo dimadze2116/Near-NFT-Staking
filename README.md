@@ -101,10 +101,20 @@ already are.
 ## Verify it without owning an NFT
 
 Seven read-only mainnet calls. No wallet, no NFT, no sign-up.
-Requires [near-cli-rs](https://github.com/near/near-cli-rs). Commands are written
-for a POSIX shell. In PowerShell the inner quotes need escaping
-(`json-args '{\"position\": 1}'`), and `$N` below is a shell variable — write
-`network-config mainnet now` out in full, as the per-call examples do.
+
+Nothing needs installing: both contracts expose their view methods in the
+browser, on NearBlocks —
+[legion-staking.near](https://nearblocks.io/address/legion-staking.near/contract/methods)
+and
+[legion-marketplace.near](https://nearblocks.io/address/legion-marketplace.near/contract/methods).
+Pick a method, send it, read the answer.
+
+To run the same calls locally, install
+[near-cli-rs](https://github.com/near/near-cli-rs). The commands below are
+written for a POSIX shell; in PowerShell, line continuations are a backtick
+rather than `\`, `$N` is a shell variable to be written out in full, and the two
+calls that take arguments need their inner quotes escaped
+(`json-args '{\"position\": 1}'`).
 
 Amounts are `U128` and therefore serialise as JSON **strings**, not numbers —
 that is deliberate, not a bug: yoctoNEAR values exceed what IEEE-754 doubles can
