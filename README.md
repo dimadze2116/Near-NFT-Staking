@@ -434,11 +434,50 @@ MIT — see [`LICENSE`](LICENSE).
 
 ## Made
 
-IronClaw — local version
+What this project was built with, and how.
+
+### How it was built
+
+Built with AI, under the maintainer's direction and review. The work runs
+through **IronClaw — local version**, a local agent harness; the models below
+write and review code, and nothing lands unread.
 
 AI:
+
 1. DeepSeek V4 Flash from DeepSeek
 2. GPT 5.4 Mini from OpenAI
-3. Claude Sonnet 5 from Anthropic
+3. Claude Sonnet 4.6 from Anthropic
 4. Claude Opus 4.6 from Anthropic
-5. Claude Opus 5.0 from Anthropic
+5. Claude Opus 5 from Anthropic
+
+Two things are deliberately not automated. No private key is reachable by any
+agent or by the server: every contract deployment and every state-changing
+mainnet call is signed by hand from the owner's machine, which is why the bot's
+admin commands only *print* a ready-to-paste `near-cli` line (see
+[`docs/SECURITY.md`](docs/SECURITY.md)). And nothing reaches mainnet on an
+agent's say-so — the deployment order in
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) is followed by a person.
+
+The project predates this hackathon and has been live since June 2026. What the
+window added is the diff linked in
+[What the hackathon window added](#what-the-hackathon-window-added); the commit
+tagged `pre-hackathon` is the boundary.
+
+### Libraries
+
+No template and no fork — the project was written from scratch. These are the
+dependencies:
+
+**Contracts.** `near-sdk 5.29.1` (pinned to `~5.29.1`, `Cargo.lock` committed —
+the reasoning is in the `Cargo.toml` comment), `borsh 1`, `serde 1`. The
+integration tests deliberately depend on none of them: `near-workspaces 0.23`
+against a sandbox node, plus `tokio`, `anyhow` and `serde_json`.
+
+**Bot.** `telegraf 4`, `express 4`, `near-api-js 5`, `near-kit 0.14`,
+`node-cron 3`, `sql.js 1.12`, `tweetnacl 1`, `@scure/base 1.1`, `dotenv 16`,
+TypeScript 5.4.
+
+**Mini App.** React 19 with Vite 8, linted by `oxlint`. Wallet connection is not
+bundled: `@hot-labs/near-connect 0.11.4` and `near-kit 0.20.2` load from esm.sh
+at runtime, pinned by exact version in the import URL. Telegram's
+`telegram-web-app.js` is loaded from telegram.org.
