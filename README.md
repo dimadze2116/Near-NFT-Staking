@@ -84,10 +84,10 @@ already are.
 
 ## What it does
 
-- **Staking.** Lock an NFT for 7, 14 or 30 days at a tiered APR, up to 4 NFTs in
-  one transaction. The reward is deducted from the pool at the moment the stake
-  is created, so every payout is funded before it is promised. If the pool cannot
-  cover it, the NFT goes straight back to the sender instead of being locked.
+- **Staking.** Lock an NFT for 7, 14 or 30 days at a tiered APR. The reward is
+  deducted from the pool at the moment the stake is created, so every payout is
+  funded before it is promised. If the pool cannot cover it, the NFT goes
+  straight back to the sender instead of being locked.
 - **Marketplace.** Escrow listings: the NFT moves to the contract, the price
   travels in `msg`. List, cancel, or buy up to 4 NFTs in a single transaction and
   a single signature. Fee is 0.5%.
@@ -238,7 +238,7 @@ near contract call-function as-read-only legion-staking.near get_unique_claimers
   json-args '{}' network-config mainnet now
 ```
 
-**See:** `"73"` and `"23"` at the time of writing — 73 completed staking cycles
+**See:** `"74"` and `"23"` on 8 November 2026 — 74 completed staking cycles
 across 23 distinct accounts, so roughly three cycles per account: people came
 back. A cycle counts only after a successful `unstake` whose NFT transfer *and*
 reward payment both resolved, which is why these two numbers are the hardest
