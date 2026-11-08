@@ -102,8 +102,9 @@ already are.
 
 Seven read-only mainnet calls. No wallet, no NFT, no sign-up.
 Requires [near-cli-rs](https://github.com/near/near-cli-rs). Commands are written
-for a POSIX shell; in PowerShell the inner quotes need escaping
-(`json-args '{\"position\": 1}'`).
+for a POSIX shell. In PowerShell the inner quotes need escaping
+(`json-args '{\"position\": 1}'`), and `$N` below is a shell variable — write
+`network-config mainnet now` out in full, as the per-call examples do.
 
 Amounts are `U128` and therefore serialise as JSON **strings**, not numbers —
 that is deliberate, not a bug: yoctoNEAR values exceed what IEEE-754 doubles can
