@@ -143,8 +143,17 @@ near contract call-function as-read-only legion-staking.near get_contract_stats 
 
 **See:** a JSON object with `owner_id`, `reward_pool`, `active_stakes`,
 `matured_stakes`, `total_staked`, `unique_stakers`. All amounts are yoctoNEAR
-strings. `owner_id` is `legion-staking.near` itself — the contract owns itself;
-see [Security](#security) for why.
+strings, and `total_staked` will equal `active_stakes` — both count the records
+that are not yet claimed, and the duplicate name is older than the other.
+`owner_id` is `legion-staking.near` itself — the contract owns itself; see
+[Security](#security) for why.
+
+`matured_stakes` may equal `active_stakes`, as it does at the time of writing.
+A position that has come due is not swept, expired or claimed on the owner's
+behalf; it waits as long as the owner leaves it. That is safe precisely because
+the reward left the pool when the stake was created — a matured position is not
+accruing anything, and it is not competing with anyone for funds that have
+already been set aside for it.
 
 ### 2. The APR really is tiered by position
 
@@ -285,11 +294,16 @@ from the collection — the gate is on-chain, not a setting.
 6. After the period elapses → `/claim` → **see** the NFT returned and the reward
    paid
 
-**One thing to check first:** call `get_reward_pool`. New stakes are only
-accepted while the pool can fully cover the reward. If the pool is near zero,
-`nft_on_transfer` returns the NFT to you instead of locking it — a deliberate
-solvency guard, not a failure. Existing stakes are unaffected and unstake
-normally.
+**One thing to check first:** call `get_reward_pool`, or read `reward_pool` out
+of `get_contract_stats` above. New stakes are accepted only while the pool can
+cover the whole reward being promised.
+
+A pool too small for the next stake is an ordinary operating state, not a broken
+contract, and you may well find it in one: `nft_on_transfer` hands the NFT back
+to the sender in the same transaction instead of locking it. Nothing is stuck
+and nothing is lost — the staking button simply declines until the pool is
+topped up. Positions already open are untouched whatever the pool says, because
+their rewards were set aside when they were created; they unstake normally.
 
 The Mini App needs Telegram's `initData` to authenticate, so it only signs when
 opened through the bot. Opened directly in a browser it renders but cannot
@@ -350,8 +364,8 @@ npm run dev
 
 ```
 contracts/
-  staking/        Rust, near-sdk 5.1 — staking, tiered APR, leaderboard
-  marketplace/    Rust, near-sdk 5.1 — escrow listings, cart purchase, 0.5% fee
+  staking/        Rust, near-sdk 5.29 — staking, tiered APR, leaderboard
+  marketplace/    Rust, near-sdk 5.29 — escrow listings, cart purchase, 0.5% fee
 bot/
   src/            TypeScript — Telegram bot, REST API, cron, SQLite
 app/
